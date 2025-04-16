@@ -24,13 +24,9 @@ class GamePanel1:
         self.haikei_ima2 = pygame.image.load("images/utyuu.png").convert()
         self.haikei_ima3 = pygame.image.load("images/earth2.png").convert()
         self.clear_ima   = pygame.image.load("images/clear.png").convert()
-        self.lose_ima    = pygame.image.load("images/lose.png").convert()
         self.jiki_ima    = pygame.image.load("images/ufo003.png").convert_alpha()  # 自機の画像
         self.teki_ima    = pygame.image.load("images/meteo2.png").convert_alpha()
         self.enemy_ima   = pygame.image.load("images/teki.jpg").convert()
-        
-        # 既存の初期化処理
-        self.reset()  # 初期化時にリセット処理を呼ぶ
 
         # タイマーの開始
         pygame.time.set_timer(TIMER_EVENT, 80)
@@ -65,7 +61,7 @@ class GamePanel1:
         self.jiki_beam_y = self.jiki_y + 19
         self.jiki_beam_flg = 0
         
-        # 敵（teki）のビーム・オブジェクト用
+        # 敵（隕石）のビーム・オブジェクト用
         self.n = 5
         self.teki_x = [0] * self.n
         self.teki_y = [0] * self.n
@@ -112,14 +108,20 @@ class GamePanel1:
         self.btn_text = "Return Top"
         self.font_btn = pygame.font.SysFont("Arial", 20)
     
+        # 既存の初期化処理
+        self.reset()  # 初期化時にリセット処理を呼ぶ
+
+
     def reset(self):
-        # ゲーム状態の初期化（例）
-        self.jiki_x = 40
-        self.jiki_y = 20
-        self.jiki_beam_flg = 0
-        self.jiki_beam_x = -100
-        # 必要な初期状態に合わせてリセット処理を追加
-        # 背景用変数の初期化
+        # ① タイマーを初期状態に戻す
+        pygame.time.set_timer(HAIKEI1_EVENT, 70)
+        pygame.time.set_timer(HAIKEI2_EVENT, 0)
+        pygame.time.set_timer(HAIKEI3_EVENT, 0)
+        pygame.time.set_timer(HAIKEI4_EVENT, 0)
+        pygame.time.set_timer(HAIKEI5_EVENT, 0)
+        pygame.time.set_timer(HAIKEI6_EVENT, 0)
+
+        # ② 背景用変数の初期化
         self.haikei_x1 = 0
         self.haikei_x2 = 0
         self.haikei_width = self.haikei_ima1.get_width()
@@ -130,9 +132,52 @@ class GamePanel1:
         self.earth_x = 0
         self.small = 1.0
         self.goal_jiki_y = 20  # 初期は自機の y 座標
-        
-        # ゲームオーバーフラグ
+
+        # ③ 自機の初期化
+        self.jiki_x = 40
+        self.jiki_y = 20
+        self.jiki_beam_flg = 0
+        self.jiki_beam_x = -100
+
+        # ④ 背景フラグを「スクロール開始」状態に
+        self.haikei_flg = 1
+        self.haikei_x1  = 0
+        self.haikei_x2  = 0
+
+        # ⑤ 隕石関連
+        for i in range(self.n):
+            # 生存フラグを立てる
+            self.teki_tama_alive[i] = 1
+            # Y 座標は画面内のランダム位置
+            self.teki_tama_y[i]     = random.randint(0, self.height - self.teki_tama_h)
+            # X 座標は画面右端 + α の位置
+            # （ここでは隕石幅×2 分だけ右にオフセット）
+            self.teki_tama_x[i]     = self.width + self.teki_tama_w * 2
+
+        # ⑥ 敵（enemy）の初期化
+        self.n_enemy = 40
+        self.w_enemy = self.enemy_ima.get_width()
+        self.h_enemy = self.enemy_ima.get_height()
+        self.x_enemy = [0] * self.n_enemy
+        self.y_enemy = [0] * self.n_enemy
+        self.vx_enemy = [0] * self.n_enemy
+        self.vy_enemy = [0.0] * self.n_enemy
+        self.v_random = [0.0] * self.n_enemy
+        self.enemy_move_flg = [False] * self.n_enemy
+        self.enemy_alive = [1] * self.n_enemy
+        self.enemy_last = 0
+        for i in range(self.n_enemy):
+            self.x_enemy[i] = 750 + int(self.haikei_width * random.random())
+            self.y_enemy[i] = int(self.haikei_height * random.random())
+            self.vx_enemy[i] = -5
+            self.enemy_alive[i] = 1
+            self.enemy_move_flg[i] = False
+            self.v_random[i] = random.random()
+
+        # ⑦ フラグの初期化
+        self.enemy_last = 0
         self.lose = 0
+        self.btn_visible = False
     
 
     # キーイベントとマウスイベントをまとめる
@@ -180,13 +225,15 @@ class GamePanel1:
                     self.teki_tama_x[i] = self.width
                     self.teki_tama_y[i] = int(self.height * ratio)
                     self.teki_tama_alive[i] = 1
-                # 自機（jiki）と敵ビームとの当たり判定
-                if (self.jiki_x+25 > self.teki_tama_x[i] and 
-                    self.jiki_x+25 < self.teki_tama_x[i] + self.teki_tama_w and
-                    self.teki_tama_y[i] < self.jiki_y+19 and
-                    self.jiki_y+19 < self.teki_tama_y[i] + self.teki_tama_h and
-                    self.teki_tama_alive[i] == 1):
-                    self.lose = 1
+                # クリア状態でなければ当たり判定を実施
+                if self.enemy_last == 0:
+                    # 自機（jiki）と敵ビームとの当たり判定
+                    if (self.jiki_x+25 > self.teki_tama_x[i] and 
+                        self.jiki_x+25 < self.teki_tama_x[i] + self.teki_tama_w and
+                        self.teki_tama_y[i] < self.jiki_y+19 and
+                        self.jiki_y+19 < self.teki_tama_y[i] + self.teki_tama_h and
+                        self.teki_tama_alive[i] == 1):
+                        self.lose = 1
             
             if self.jiki_beam_flg == 1:
                 self.jiki_beam_x += 100
@@ -246,7 +293,6 @@ class GamePanel1:
                 self.haikei_x1 = 0
         elif event.type == HAIKEI5_EVENT:
             self.haikei_flg = 3
-            self.enemy_last = 1
             self.earth_x -= 5
             if self.earth_x + self.width <= self.width - self.earth_width:
                 pygame.time.set_timer(HAIKEI5_EVENT, 0)
@@ -261,6 +307,13 @@ class GamePanel1:
                 self.goal_jiki_y += (self.height - self.goal_jiki_y - self.earth_height) / denom * 10
             if self.jiki_x + (50 // int(self.small)) >= self.width + self.earth_x:
                 pygame.time.set_timer(HAIKEI6_EVENT, 0)
+                self.enemy_last = 1
+
+        # 「負け」が確定したら LosePanel へ移行
+        if self.lose == 1 and self.enemy_last == 0:
+            self.mainframe.panelChange("losepanel")
+            return  # 以降の update や draw は不要なので抜ける
+        
         
     def draw(self):
         # 背景を黒で塗りつぶし
@@ -291,20 +344,16 @@ class GamePanel1:
         if self.haikei_flg == 4:
             scale_factor = int(self.small)
             if scale_factor == 0:
-                scale_factor = 1
+                # クリアアニメーション中：自機が地球に迫っていく動きを描画する
+                scale_factor = max(1, int(self.small))
             img_jiki2 = pygame.transform.scale(self.jiki_ima, (50 // scale_factor, 38 // scale_factor))
             self.screen.blit(img_jiki2, (self.jiki_x, int(self.goal_jiki_y)))
             if self.enemy_last == 1:
+                # 本当のクリア画面
                 img_clear = pygame.transform.scale(self.clear_ima, (self.width, self.height))
                 self.screen.blit(img_clear, (0, 0))
-            self.btn_visible = True
-            pygame.draw.rect(self.screen, (200, 200, 200), self.btn_rect)
-            btn_text_surf = self.font_btn.render(self.btn_text, True, (0, 0, 0))
-            btn_text_rect = btn_text_surf.get_rect(center=self.btn_rect.center)
-            self.screen.blit(btn_text_surf, btn_text_rect)
-        if self.lose == 1 and self.enemy_last == 0:
-            img_lose = pygame.transform.scale(self.lose_ima, (self.width, self.height))
-            self.screen.blit(img_lose, (0, 0))
+
+            # クリア後は必ずボタンを表示
             self.btn_visible = True
             pygame.draw.rect(self.screen, (200, 200, 200), self.btn_rect)
             btn_text_surf = self.font_btn.render(self.btn_text, True, (0, 0, 0))

@@ -3,6 +3,7 @@ import sys
 from TopPanel import TopPanel
 from GamePanel1 import GamePanel1
 from RulePanel import RulePanel
+from LosePanel import LosePanel
 
 class MainFrame:
     def __init__(self):
@@ -15,7 +16,8 @@ class MainFrame:
         self.panels = {
             "toppanel": TopPanel(self.screen, self),
             "gamepanel1": GamePanel1(self.screen, self),
-            "rulepanel": RulePanel(self.screen, self)
+            "rulepanel": RulePanel(self.screen, self),
+            "losepanel": LosePanel(self.screen, self)
         }
         # 初期表示パネルをトップパネルに設定
         self.current_panel = "toppanel"

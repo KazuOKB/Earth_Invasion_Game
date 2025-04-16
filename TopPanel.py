@@ -38,7 +38,9 @@ class TopPanel:
             # ボタンの領域にマウスの座標が含まれていればTrueを返す関数
             if self.btn1_rect.collidepoint(pos):
                 print("Game start ボタンがクリックされました")
-                # MainFrame の panelChange() を呼んで gamepanel1 に遷移
+                # ① reset を呼ぶ
+                self.mainframe.panels["gamepanel1"].reset()
+                # ② MainFrame の panelChange() を呼んで gamepanel1 に遷移
                 self.mainframe.panelChange("gamepanel1")
             
             if self.btn3_rect.collidepoint(pos):
@@ -52,7 +54,7 @@ class TopPanel:
 
     def draw(self):
         # 背景画像を画面全体に描画
-        # blit "bit block transfer"
+        # blit: "bit block transfer"
         self.screen.blit(pygame.transform.scale(self.haikei, self.screen.get_size()), (0, 0))
         
         # その他の画像の描画

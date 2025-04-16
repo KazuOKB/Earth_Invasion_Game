@@ -1,0 +1,20 @@
+# ライブラリ
+node_modules/
+.venv/
+
+# ビルド・生成物
+dist/
+build/
+
+# エディタ・OSの設定ファイル
+.vscode/
+.DS_Store
+
+# バイナリ・重いファイル
+*.zip
+*.log
+*.mp4
+*.mov
+*.jpg
+*.png
+*.pdf
