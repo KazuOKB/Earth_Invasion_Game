@@ -218,11 +218,7 @@ class GamePanel1:
     def update(self, event):
         # メインタイマー（80ms）
         if event.type == TIMER_EVENT:
-            # クリア演出に入ったら移動だけして、以下の「当たり判定」はスキップ
-            if self.haikei_flg >= 3:
-                # ここで隕石や敵を画面外に逃がす or フラグを消すなら入れてもOK
-                return
-            # ────────── クリア前の本来の移動 ＋ 当たり判定処理 ──────────
+            # ──── 隕石は常に移動 ────
             for i in range(self.n):
                 if self.meteo_tama_x[i] >= -self.meteo_w:
                     self.meteo_tama_x[i] -= (i+1) * 4
@@ -232,9 +228,10 @@ class GamePanel1:
                     self.meteo_tama_x[i] = self.width
                     self.meteo_tama_y[i] = int(self.height * ratio)
                     self.meteo_tama_alive[i] = 1
-                    
-                # クリア状態でなければ当たり判定を実施
-                if self.enemy_last == 0:
+            
+            # ────────── クリア前のみ当たり判定処理 ──────────
+            if self.haikei_flg < 3 and self.enemy_last == 0:
+                for i in range(self.n):
                     # 自機（jiki）と敵ビームとの当たり判定
                     if (self.jiki_x+25 > self.meteo_tama_x[i] and 
                         self.jiki_x+25 < self.meteo_tama_x[i] + self.meteo_tama_w and
