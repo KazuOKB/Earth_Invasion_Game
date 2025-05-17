@@ -25,8 +25,8 @@ class GamePanel1:
         self.haikei_ima3 = pygame.image.load("images/earth2.png").convert()
         self.clear_ima   = pygame.image.load("images/clear.png").convert()
         self.jiki_ima    = pygame.image.load("images/ufo003.png").convert_alpha()  # 自機の画像
-        self.teki_ima    = pygame.image.load("images/meteo2.png").convert_alpha()
-        self.enemy_ima   = pygame.image.load("images/teki.jpg").convert()
+        self.meteo_now    = pygame.image.load("images/meteo2.png").convert_alpha()
+        self.enemy_ima   = pygame.image.load("images/enemy.jpg").convert()
 
         # タイマーの開始
         pygame.time.set_timer(TIMER_EVENT, 80)
@@ -61,26 +61,26 @@ class GamePanel1:
         self.jiki_beam_y = self.jiki_y + 19
         self.jiki_beam_flg = 0
         
-        # 敵（隕石）のビーム・オブジェクト用
+        # 敵（隕石）のオブジェクト用
         self.n = 5
-        self.teki_x = [0] * self.n
-        self.teki_y = [0] * self.n
-        self.teki_w = self.teki_ima.get_width()
-        self.teki_h = self.teki_ima.get_height()
+        self.meteo_x = [0] * self.n
+        self.meteo_y = [0] * self.n
+        self.meteo_w = self.meteo_now.get_width()
+        self.meteo_h = self.meteo_now.get_height()
         for i in range(self.n):
             ratio = random.random() * 5
-            self.teki_y[i] = i * self.teki_h + 100
-            self.teki_x[i] = int(ratio * 200 + self.width)
-        self.teki_tama_x = [0] * self.n
-        self.teki_tama_y = [0] * self.n
-        self.teki_tama_alive = [0] * self.n
+            self.meteo_y[i] = i * self.meteo_h + 100
+            self.meteo_x[i] = int(ratio * 200 + self.width)
+        self.meteo_tama_x = [0] * self.n
+        self.meteo_tama_y = [0] * self.n
+        self.meteo_tama_alive = [0] * self.n
         for i in range(self.n):
             ratio = random.random()
-            self.teki_tama_y[i] = int(self.height * ratio)
-            self.teki_tama_x[i] = self.teki_x[i] + 2 * self.teki_w
-            self.teki_tama_alive[i] = 1
-        self.teki_tama_w = self.teki_w
-        self.teki_tama_h = self.teki_h
+            self.meteo_tama_y[i] = int(self.height * ratio)
+            self.meteo_tama_x[i] = self.meteo_x[i] + 2 * self.meteo_w
+            self.meteo_tama_alive[i] = 1
+        self.meteo_tama_w = self.meteo_w
+        self.meteo_tama_h = self.meteo_h
         
         # 敵（enemy）の初期化
         self.n_enemy = 40
@@ -147,12 +147,12 @@ class GamePanel1:
         # ⑤ 隕石関連
         for i in range(self.n):
             # 生存フラグを立てる
-            self.teki_tama_alive[i] = 1
+            self.meteo_tama_alive[i] = 1
             # Y 座標は画面内のランダム位置
-            self.teki_tama_y[i]     = random.randint(0, self.height - self.teki_tama_h)
+            self.meteo_tama_y[i]     = random.randint(0, self.height - self.meteo_tama_h)
             # X 座標は画面右端 + α の位置
             # （ここでは隕石幅×2 分だけ右にオフセット）
-            self.teki_tama_x[i]     = self.width + self.teki_tama_w * 2
+            self.meteo_tama_x[i]     = self.width + self.meteo_tama_w * 2
 
         # ⑥ 敵（enemy）の初期化
         self.n_enemy = 40
@@ -217,36 +217,63 @@ class GamePanel1:
     def update(self, event):
         # メインタイマー（80ms）
         if event.type == TIMER_EVENT:
+            # クリア演出に入ったら移動だけして、以下の「当たり判定」はスキップ
+            if self.haikei_flg >= 3:
+                # ここで隕石や敵を画面外に逃がす or フラグを消すなら入れてもOK
+                return
+            # ────────── クリア前の本来の移動 ＋ 当たり判定処理 ──────────
             for i in range(self.n):
-                if self.teki_tama_x[i] >= -self.teki_w:
-                    self.teki_tama_x[i] -= (i+1) * 4
-                if self.teki_tama_x[i] < -self.teki_w:
+                if self.meteo_tama_x[i] >= -self.meteo_w:
+                    self.meteo_tama_x[i] -= (i+1) * 4
+                if self.meteo_tama_x[i] < -self.meteo_w:
+                    # 画面外に行ったら再生成
                     ratio = random.random()
-                    self.teki_tama_x[i] = self.width
-                    self.teki_tama_y[i] = int(self.height * ratio)
-                    self.teki_tama_alive[i] = 1
+                    self.meteo_tama_x[i] = self.width
+                    self.meteo_tama_y[i] = int(self.height * ratio)
+                    self.meteo_tama_alive[i] = 1
+                    
                 # クリア状態でなければ当たり判定を実施
                 if self.enemy_last == 0:
                     # 自機（jiki）と敵ビームとの当たり判定
-                    if (self.jiki_x+25 > self.teki_tama_x[i] and 
-                        self.jiki_x+25 < self.teki_tama_x[i] + self.teki_tama_w and
-                        self.teki_tama_y[i] < self.jiki_y+19 and
-                        self.jiki_y+19 < self.teki_tama_y[i] + self.teki_tama_h and
-                        self.teki_tama_alive[i] == 1):
+                    if (self.jiki_x+25 > self.meteo_tama_x[i] and 
+                        self.jiki_x+25 < self.meteo_tama_x[i] + self.meteo_tama_w and
+                        self.meteo_tama_y[i] < self.jiki_y+19 and
+                        self.jiki_y+19 < self.meteo_tama_y[i] + self.meteo_tama_h and
+                        self.meteo_tama_alive[i] == 1):
                         self.lose = 1
             
             if self.jiki_beam_flg == 1:
+                # ビームを前進させる
                 self.jiki_beam_x += 100
-            if self.jiki_beam_x > self.width + 100:
-                self.jiki_beam_flg = 0
-                self.jiki_beam_x = -200
-            if self.jiki_beam_flg == 1:
+
+                # 衝突判定（画面外チェックとは独立して毎フレーム実行）
                 for i in range(self.n):
-                    if (self.teki_tama_alive[i] == 1 and
-                        self.teki_tama_x[i] < self.jiki_beam_x < self.teki_tama_x[i] + self.teki_tama_w and
-                        self.teki_tama_y[i] < self.jiki_beam_y < self.teki_tama_y[i] + self.teki_tama_h):
-                        self.teki_tama_alive[i] = 0
+                    if (self.meteo_tama_alive[i] == 1
+                        and self.meteo_tama_x[i] < self.jiki_beam_x < self.meteo_tama_x[i] + self.meteo_tama_w
+                        and self.meteo_tama_y[i] < self.jiki_beam_y < self.meteo_tama_y[i] + self.meteo_tama_h):
+                        self.meteo_tama_alive[i] = 0
                         self.jiki_beam_flg = 0
+                        print(f"隕石[{i}] を破壊しました")
+                        break     # 一つ当たったらループを抜けても OK
+
+                # 画面外まで行ったらビームを消去
+                if self.jiki_beam_x > self.width + 100:
+                    self.jiki_beam_flg = 0
+                    self.jiki_beam_x = -200
+
+                    # 当たり判定
+                    for i in range(self.n):
+                        if (self.meteo_tama_alive[i] == 1
+                            and self.meteo_tama_x[i] < self.jiki_beam_x < self.meteo_tama_x[i] + self.meteo_tama_w
+                            and self.meteo_tama_y[i] < self.jiki_beam_y < self.meteo_tama_y[i] + self.meteo_tama_h):
+                            self.meteo_tama_alive[i] = 0
+                            self.jiki_beam_flg = 0
+                            print(f"隕石[{i}] を破壊しました")
+
+                    # 画面外到達でビームを消去
+                    if self.jiki_beam_x > self.width + 100:
+                        self.jiki_beam_flg = 0
+                        self.jiki_beam_x = -200
         
         elif event.type == HAIKEI1_EVENT:
             self.haikei_flg = 1
@@ -293,10 +320,18 @@ class GamePanel1:
                 self.haikei_x1 = 0
         elif event.type == HAIKEI5_EVENT:
             self.haikei_flg = 3
+            # 地球が近づいてくる
             self.earth_x -= 5
             if self.earth_x + self.width <= self.width - self.earth_width:
+                # クリア開始
                 pygame.time.set_timer(HAIKEI5_EVENT, 0)
                 pygame.time.set_timer(HAIKEI6_EVENT, 70)
+
+                # ここで敵もビームも「消滅」させる
+                self.enemy_alive = [0] * self.n_enemy
+                self.meteo_tama_alive = [0] * self.n
+
+
             # タイマー5の処理終了後、画面更新は main ループで行う
         elif event.type == HAIKEI6_EVENT:
             self.haikei_flg = 4
@@ -335,12 +370,14 @@ class GamePanel1:
                 img_earth = pygame.transform.scale(self.haikei_ima3, (100, 100))
                 self.screen.blit(img_earth, (self.earth_x + self.width, self.height - self.earth_height))
             if self.enemy_last == 0:
-                for i in range(self.n_enemy):
-                    if self.enemy_alive[i] == 1:
-                        self.screen.blit(self.enemy_ima, (self.x_enemy[i], self.y_enemy[i]))
+                # クリア演出中(haikei_flg>=3)は隕石を描画しない        
+                if self.haikei_flg < 3 and self.enemy_last == 0:
+                    for i in range(self.n_enemy):
+                        if self.enemy_alive[i] == 1:
+                            self.screen.blit(self.enemy_ima, (self.x_enemy[i], self.y_enemy[i]))
                 for i in range(self.n):
-                    if self.teki_tama_alive[i] == 1:
-                        self.screen.blit(self.teki_ima, (self.teki_tama_x[i], self.teki_tama_y[i]))
+                    if self.meteo_tama_alive[i] == 1:
+                        self.screen.blit(self.meteo_now, (self.meteo_tama_x[i], self.meteo_tama_y[i]))
         if self.haikei_flg == 4:
             scale_factor = int(self.small)
             if scale_factor == 0:
@@ -349,7 +386,7 @@ class GamePanel1:
             img_jiki2 = pygame.transform.scale(self.jiki_ima, (50 // scale_factor, 38 // scale_factor))
             self.screen.blit(img_jiki2, (self.jiki_x, int(self.goal_jiki_y)))
             if self.enemy_last == 1:
-                # 本当のクリア画面
+                # クリア画面
                 img_clear = pygame.transform.scale(self.clear_ima, (self.width, self.height))
                 self.screen.blit(img_clear, (0, 0))
 
