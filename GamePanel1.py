@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+from LosePanel import LosePanel
 
 # カスタムイベントの定義
 TIMER_EVENT    = pygame.USEREVENT + 1
@@ -253,27 +254,13 @@ class GamePanel1:
                         and self.meteo_tama_y[i] < self.jiki_beam_y < self.meteo_tama_y[i] + self.meteo_tama_h):
                         self.meteo_tama_alive[i] = 0
                         self.jiki_beam_flg = 0
-                        print(f"隕石[{i}] を破壊しました")
-                        break     # 一つ当たったらループを抜けても OK
+                        print(f"隕石を破壊しました")
+                        break # 一つ当たったらループを抜ける
 
                 # 画面外まで行ったらビームを消去
                 if self.jiki_beam_x > self.width + 100:
                     self.jiki_beam_flg = 0
                     self.jiki_beam_x = -200
-
-                    # 当たり判定
-                    for i in range(self.n):
-                        if (self.meteo_tama_alive[i] == 1
-                            and self.meteo_tama_x[i] < self.jiki_beam_x < self.meteo_tama_x[i] + self.meteo_tama_w
-                            and self.meteo_tama_y[i] < self.jiki_beam_y < self.meteo_tama_y[i] + self.meteo_tama_h):
-                            self.meteo_tama_alive[i] = 0
-                            self.jiki_beam_flg = 0
-                            print(f"隕石[{i}] を破壊しました")
-
-                    # 画面外到達でビームを消去
-                    if self.jiki_beam_x > self.width + 100:
-                        self.jiki_beam_flg = 0
-                        self.jiki_beam_x = -200
         
         elif event.type == HAIKEI1_EVENT:
             self.haikei_flg = 1
@@ -422,6 +409,10 @@ if __name__ == "__main__":
             else:
                 panel.handle_event(event)
                 panel.update(event)
+                # ここで負け判定をチェックしてパネルを差し替え
+                if getattr(panel, "lose", 0) == 1:
+                   panel = LosePanel(screen, dummy_mainframe)
+                   break
         panel.draw()
         pygame.display.flip()
         clock.tick(60)
