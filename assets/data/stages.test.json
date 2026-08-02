@@ -1,0 +1,22 @@
+{
+  "profile": "test",
+  "invasion_target": 10,
+  "phases": [
+    {
+      "id": "meteor",
+      "duration_seconds": 2.0
+    },
+    {
+      "id": "chaser",
+      "duration_seconds": 2.0
+    },
+    {
+      "id": "shooter",
+      "duration_seconds": 2.0
+    },
+    {
+      "id": "boss",
+      "duration_seconds": null
+    }
+  ]
+}
