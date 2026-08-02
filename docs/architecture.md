@@ -49,24 +49,21 @@ Earth_Invasion_Game/
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── configuration.py
+│       ├── assets/
+│       │   └── ufo003.png
 │       ├── data/
 │       │   ├── gameplay.json
 │       │   ├── stages.normal.json
 │       │   └── stages.test.json
 │       ├── gameplay/
 │       │   ├── commands.py
-│       │   ├── events.py
-│       │   ├── geometry.py
-│       │   ├── entities.py
-│       │   ├── stage.py
 │       │   └── session.py
 │       └── pygame_app/
 │           ├── app.py
 │           ├── input.py
-│           ├── renderer.py
 │           ├── assets.py
-│           ├── audio.py
-│           └── scenes/
+│           ├── display.py
+│           └── fixed_step.py
 └── tests/
     ├── gameplay/
     └── pygame_app/
@@ -165,6 +162,12 @@ Pygameのタイマーイベントでステージを進めません。
 
 1フレームが長くなっても、一度に大きく動かさないようにします。
 
+Pygameから受け取った経過時間は、固定更新の回数へ変換します。
+余った時間は次のフレームへ持ち越します。
+
+ウィンドウの移動などで長時間止まった場合は、最大0.25秒分だけ更新します。
+これにより、一度に大量の更新が実行されることを防ぎます。
+
 ## 10. ステージ設定
 
 ステージ時間は`src/earth_invasion/data/`のJSONから読み込みます。
@@ -215,6 +218,7 @@ uv run earth-invasion --stage-profile test --check-config
 - 1秒あたりの更新回数
 - プレイヤーの最大体力
 - 被弾後の無敵時間
+- プレイヤーの移動速度
 - ビームの発射間隔
 - 敵を倒したときの侵略ゲージ増加量
 
@@ -245,7 +249,6 @@ Pygameのキーを、そのままゲームへ渡しません。
 @dataclass(frozen=True, slots=True)
 class PlayerCommand:
     vertical_direction: int
-    fire_pressed: bool
 ```
 
 `vertical_direction`は次の値を使います。
@@ -253,6 +256,8 @@ class PlayerCommand:
 - `-1`: 上
 - `0`: 移動なし
 - `1`: 下
+
+ビームを実装するときに、発射操作を`PlayerCommand`へ追加します。
 
 ## 13. ゲームイベント
 
@@ -297,6 +302,10 @@ random_source = random.Random(seed)
 
 最初に次をテストします。
 
+- 固定時間から必要な更新回数を計算できる
+- 長時間停止後の更新回数が制限される
+- プレイヤーが設定した速度で上下に移動する
+- プレイヤーが画面の上下端で止まる
 - 時間で区間が進む
 - テスト設定では短時間でボスまで進む
 - 敵を倒すと侵略ゲージが増える
