@@ -10,6 +10,7 @@ class PlayerCommand:
     """1回の更新で使うプレイヤー操作。"""
 
     vertical_direction: int = 0
+    fire_pressed: bool = False
 
     def __post_init__(self) -> None:
         if self.vertical_direction not in (-1, 0, 1):

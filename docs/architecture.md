@@ -220,6 +220,7 @@ uv run earth-invasion --stage-profile test --check-config
 - 被弾後の無敵時間
 - プレイヤーの移動速度
 - ビームの発射間隔
+- ビームの移動速度
 - 敵を倒したときの侵略ゲージ増加量
 
 ## 11. 画面の拡大
@@ -249,6 +250,7 @@ Pygameのキーを、そのままゲームへ渡しません。
 @dataclass(frozen=True, slots=True)
 class PlayerCommand:
     vertical_direction: int
+    fire_pressed: bool
 ```
 
 `vertical_direction`は次の値を使います。
@@ -257,7 +259,8 @@ class PlayerCommand:
 - `0`: 移動なし
 - `1`: 下
 
-ビームを実装するときに、発射操作を`PlayerCommand`へ追加します。
+`fire_pressed`は`Z`を押している間、`True`になります。
+ゲームルール側は発射間隔を確認してからビームを作ります。
 
 ## 13. ゲームイベント
 
@@ -306,6 +309,9 @@ random_source = random.Random(seed)
 - 長時間停止後の更新回数が制限される
 - プレイヤーが設定した速度で上下に移動する
 - プレイヤーが画面の上下端で止まる
+- ビームが設定した発射間隔を守る
+- ビームが設定した速度で移動する
+- 画面外へ出たビームが削除される
 - 時間で区間が進む
 - テスト設定では短時間でボスまで進む
 - 敵を倒すと侵略ゲージが増える

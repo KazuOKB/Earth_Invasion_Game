@@ -19,3 +19,13 @@ def test_both_keys_cancel_each_other() -> None:
     command = create_player_command(up_pressed=True, down_pressed=True)
 
     assert command.vertical_direction == 0
+
+
+def test_z_key_creates_fire_command() -> None:
+    command = create_player_command(
+        up_pressed=False,
+        down_pressed=False,
+        fire_pressed=True,
+    )
+
+    assert command.fire_pressed is True

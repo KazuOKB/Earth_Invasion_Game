@@ -10,7 +10,8 @@
     "movement_speed_pixels_per_second": 240.0
   },
   "weapon": {
-    "beam_cooldown_seconds": 0.25
+    "beam_cooldown_seconds": 0.25,
+    "beam_speed_pixels_per_second": 600.0
   },
   "invasion_rewards": {
     "meteor": 2,

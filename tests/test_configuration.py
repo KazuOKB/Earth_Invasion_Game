@@ -24,6 +24,7 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.player.invincibility_seconds == 1.0
     assert config.gameplay.player.movement_speed_pixels_per_second == 240.0
     assert config.gameplay.weapon.beam_cooldown_seconds == 0.25
+    assert config.gameplay.weapon.beam_speed_pixels_per_second == 600.0
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
@@ -75,6 +76,18 @@ def test_non_positive_movement_speed_is_rejected(tmp_path: Path) -> None:
     path.write_text(json.dumps(data), encoding="utf-8")
 
     with pytest.raises(ConfigError, match="movement_speed_pixels_per_second"):
+        load_gameplay_config(path)
+
+
+def test_non_positive_beam_speed_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "gameplay.json"
+    data = _gameplay_config_data()
+    weapon = data["weapon"]
+    assert isinstance(weapon, dict)
+    weapon["beam_speed_pixels_per_second"] = 0
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="beam_speed_pixels_per_second"):
         load_gameplay_config(path)
 
 
@@ -155,6 +168,9 @@ def _gameplay_config_data() -> dict[str, object]:
             "invincibility_seconds": 1.0,
             "movement_speed_pixels_per_second": 240.0,
         },
-        "weapon": {"beam_cooldown_seconds": 0.25},
+        "weapon": {
+            "beam_cooldown_seconds": 0.25,
+            "beam_speed_pixels_per_second": 600.0,
+        },
         "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
     }

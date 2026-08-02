@@ -43,6 +43,7 @@ class WeaponConfig:
     """プレイヤーの武器設定。"""
 
     beam_cooldown_seconds: float
+    beam_speed_pixels_per_second: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,6 +142,11 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
             beam_cooldown_seconds=_positive_number(
                 weapon,
                 "beam_cooldown_seconds",
+                "weapon",
+            ),
+            beam_speed_pixels_per_second=_positive_number(
+                weapon,
+                "beam_speed_pixels_per_second",
                 "weapon",
             ),
         ),
