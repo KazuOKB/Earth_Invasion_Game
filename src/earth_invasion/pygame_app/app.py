@@ -15,6 +15,7 @@ BACKGROUND_COLOR = (6, 10, 28)
 LETTERBOX_COLOR = (0, 0, 0)
 TITLE_COLOR = (255, 90, 30)
 TEXT_COLOR = (230, 235, 255)
+BEAM_COLOR = (100, 235, 255)
 
 
 class PygameApplication:
@@ -68,13 +69,14 @@ class PygameApplication:
                 command = create_player_command(
                     up_pressed=keys[pygame.K_UP],
                     down_pressed=keys[pygame.K_DOWN],
+                    fire_pressed=keys[pygame.K_z],
                 )
                 update_count = fixed_time_step.consume(elapsed_seconds)
 
                 for _ in range(update_count):
                     session.update(command, fixed_time_step.step_seconds)
 
-                self._draw_movement_screen(
+                self._draw_gameplay_preview(
                     logical_surface,
                     title_font,
                     text_font,
@@ -95,15 +97,18 @@ class PygameApplication:
     def _create_session(self, player_size: Size) -> GameSession:
         player_width, player_height = player_size
         player_config = self.config.gameplay.player
+        weapon_config = self.config.gameplay.weapon
         return GameSession.create(
             world_width=self.logical_size[0],
             world_height=self.logical_size[1],
             player_width=player_width,
             player_height=player_height,
             movement_speed=player_config.movement_speed_pixels_per_second,
+            beam_speed=weapon_config.beam_speed_pixels_per_second,
+            beam_cooldown_seconds=weapon_config.beam_cooldown_seconds,
         )
 
-    def _draw_movement_screen(
+    def _draw_gameplay_preview(
         self,
         surface: pygame.Surface,
         title_font: pygame.font.Font,
@@ -113,7 +118,7 @@ class PygameApplication:
     ) -> None:
         surface.fill(BACKGROUND_COLOR)
 
-        title = title_font.render("Player Movement", True, TITLE_COLOR)
+        title = title_font.render("Movement and Beam", True, TITLE_COLOR)
         title_rect = title.get_rect(center=(self.logical_size[0] // 2, 40))
         surface.blit(title, title_rect)
 
@@ -128,7 +133,16 @@ class PygameApplication:
         player_position = round(session.player.x), round(session.player.y)
         surface.blit(player_image, player_position)
 
-        guide = text_font.render("Up / Down: Move    Esc: Close", True, TEXT_COLOR)
+        for beam in session.beams:
+            beam_rectangle = pygame.Rect(
+                round(beam.x),
+                round(beam.y),
+                beam.width,
+                beam.height,
+            )
+            pygame.draw.rect(surface, BEAM_COLOR, beam_rectangle)
+
+        guide = text_font.render("Up / Down: Move    Z: Beam    Esc: Close", True, TEXT_COLOR)
         guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 475))
         surface.blit(guide, guide_rect)
 
