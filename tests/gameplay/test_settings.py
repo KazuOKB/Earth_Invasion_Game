@@ -2,7 +2,7 @@
 
 import pytest
 
-from earth_invasion.gameplay.settings import ChaserSettings, MeteorSettings
+from earth_invasion.gameplay.settings import ChaserSettings, MeteorSettings, PlayerSettings
 
 
 def test_non_positive_chaser_tracking_speed_is_rejected() -> None:
@@ -24,4 +24,15 @@ def test_meteor_minimum_speed_cannot_exceed_maximum() -> None:
             spawn_interval_seconds=1.2,
             minimum_speed=301.0,
             maximum_speed=300.0,
+        )
+
+
+def test_non_positive_player_health_is_rejected() -> None:
+    with pytest.raises(ValueError, match="player.max_health"):
+        PlayerSettings(
+            width=57,
+            height=38,
+            movement_speed=240.0,
+            max_health=0,
+            invincibility_seconds=1.0,
         )

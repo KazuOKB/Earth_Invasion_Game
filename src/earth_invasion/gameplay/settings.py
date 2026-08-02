@@ -7,16 +7,20 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class PlayerSettings:
-    """プレイヤーの大きさと移動速度。"""
+    """プレイヤーの大きさ、移動速度、耐久力。"""
 
     width: int
     height: int
     movement_speed: float
+    max_health: int
+    invincibility_seconds: float
 
     def __post_init__(self) -> None:
         _check_positive(self.width, "player.width")
         _check_positive(self.height, "player.height")
         _check_positive(self.movement_speed, "player.movement_speed")
+        _check_positive(self.max_health, "player.max_health")
+        _check_positive(self.invincibility_seconds, "player.invincibility_seconds")
 
 
 @dataclass(frozen=True, slots=True)

@@ -16,6 +16,20 @@ class Player:
     y: float
     width: int
     height: int
+    health: int
+    invincibility_remaining: float = 0.0
+
+    @property
+    def is_invincible(self) -> bool:
+        """被弾後の無敵時間中か返す。"""
+
+        return self.invincibility_remaining > 0.0
+
+    @property
+    def is_defeated(self) -> bool:
+        """体力がなくなっているか返す。"""
+
+        return self.health <= 0
 
     def move_vertical(
         self,
@@ -29,6 +43,24 @@ class Player:
         movement = direction * speed * elapsed_seconds
         maximum_y = world_height - self.height
         self.y = min(max(self.y + movement, 0.0), float(maximum_y))
+
+    def update_invincibility(self, elapsed_seconds: float) -> None:
+        """無敵時間を減らす。"""
+
+        self.invincibility_remaining = max(
+            self.invincibility_remaining - elapsed_seconds,
+            0.0,
+        )
+
+    def take_damage(self, damage: int, invincibility_seconds: float) -> bool:
+        """可能ならダメージを受け、受けた場合はTrueを返す。"""
+
+        if self.is_invincible or self.is_defeated:
+            return False
+
+        self.health = max(self.health - damage, 0)
+        self.invincibility_remaining = invincibility_seconds
+        return True
 
 
 @dataclass(slots=True)

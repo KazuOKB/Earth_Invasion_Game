@@ -34,6 +34,7 @@ GAUGE_COLOR = (255, 100, 40)
 GAUGE_BACKGROUND_COLOR = (45, 50, 70)
 GAUGE_WIDTH = 250
 GAUGE_HEIGHT = 14
+PLAYER_BLINK_INTERVAL_SECONDS = 0.1
 
 
 class PygameApplication:
@@ -142,6 +143,8 @@ class PygameApplication:
                 width=player_width,
                 height=player_height,
                 movement_speed=player_config.movement_speed_pixels_per_second,
+                max_health=player_config.max_health,
+                invincibility_seconds=player_config.invincibility_seconds,
             ),
             weapon_settings=WeaponSettings(
                 beam_speed=weapon_config.beam_speed_pixels_per_second,
@@ -202,6 +205,7 @@ class PygameApplication:
         surface.blit(stage_status, stage_status_rect)
 
         self._draw_invasion_gauge(surface, text_font, session)
+        self._draw_health(surface, text_font, session)
 
         for meteor in session.meteors:
             meteor_position = round(meteor.x), round(meteor.y)
@@ -211,8 +215,9 @@ class PygameApplication:
             chaser_position = round(chaser.x), round(chaser.y)
             surface.blit(chaser_image, chaser_position)
 
-        player_position = round(session.player.x), round(session.player.y)
-        surface.blit(player_image, player_position)
+        if self._player_is_visible(session):
+            player_position = round(session.player.x), round(session.player.y)
+            surface.blit(player_image, player_position)
 
         for beam in session.beams:
             beam_rectangle = pygame.Rect(
@@ -251,6 +256,26 @@ class PygameApplication:
         )
         label_rect = label.get_rect(center=(self.logical_size[0] // 2, 137))
         surface.blit(label, label_rect)
+
+    def _draw_health(
+        self,
+        surface: pygame.Surface,
+        text_font: pygame.font.Font,
+        session: GameSession,
+    ) -> None:
+        health = text_font.render(
+            f"Health: {session.player.health} / {session.player_settings.max_health}",
+            True,
+            TEXT_COLOR,
+        )
+        surface.blit(health, (20, 105))
+
+    def _player_is_visible(self, session: GameSession) -> bool:
+        if not session.player.is_invincible:
+            return True
+
+        blink_count = int(session.player.invincibility_remaining / PLAYER_BLINK_INTERVAL_SECONDS)
+        return blink_count % 2 == 0
 
     def _present(
         self,

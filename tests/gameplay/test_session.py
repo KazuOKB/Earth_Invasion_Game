@@ -24,6 +24,7 @@ def test_player_starts_on_left_and_vertical_center() -> None:
 
     assert session.player.x == 100.0
     assert session.player.y == 231.0
+    assert session.player.health == 3
 
 
 def test_player_moves_at_configured_speed() -> None:
@@ -308,11 +309,89 @@ def test_beam_destroys_chaser_and_increases_invasion_gauge() -> None:
     assert session.invasion_gauge == 5
 
 
+def test_meteor_contact_damages_player_and_removes_meteor() -> None:
+    session = _create_session()
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 2
+    assert session.player.invincibility_remaining == 1.0
+    assert session.meteors == []
+
+
+def test_chaser_contact_damages_player_and_removes_chaser() -> None:
+    session = _create_session()
+    session.chasers.append(_create_chaser(x=120.0, y=220.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 2
+    assert session.chasers == []
+
+
+def test_simultaneous_enemy_contacts_deal_only_one_damage() -> None:
+    session = _create_session()
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.chasers.append(_create_chaser(x=120.0, y=220.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 2
+    assert session.meteors == []
+    assert session.chasers == []
+
+
+def test_invincibility_prevents_additional_damage() -> None:
+    session = _create_session()
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    session.meteors.append(_create_meteor(x=200.0, y=220.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.5)
+
+    assert session.player.health == 2
+    assert session.player.invincibility_remaining == 0.5
+    assert session.meteors == []
+
+
+def test_player_can_take_damage_after_invincibility_finishes() -> None:
+    session = _create_session()
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    session.update(PlayerCommand(), elapsed_seconds=1.0)
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 1
+
+
+def test_player_health_does_not_fall_below_zero() -> None:
+    session = _create_session()
+    session.player.health = 1
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    session.player.invincibility_remaining = 0.0
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 0
+    assert session.player_is_defeated
+
+
 def _create_session(random_seed: int = 1) -> GameSession:
     return GameSession.create(
         world_width=750,
         world_height=500,
-        player_settings=PlayerSettings(width=57, height=38, movement_speed=240.0),
+        player_settings=PlayerSettings(
+            width=57,
+            height=38,
+            movement_speed=240.0,
+            max_health=3,
+            invincibility_seconds=1.0,
+        ),
         weapon_settings=WeaponSettings(
             beam_speed=600.0,
             beam_cooldown_seconds=0.25,
