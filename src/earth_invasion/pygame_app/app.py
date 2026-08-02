@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import random
+
 import pygame
 
 from earth_invasion.configuration import ApplicationConfig
 from earth_invasion.gameplay.session import GameSession
-from earth_invasion.pygame_app.assets import load_player_image
+from earth_invasion.pygame_app.assets import load_meteor_image, load_player_image
 from earth_invasion.pygame_app.display import Size, calculate_viewport
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
 from earth_invasion.pygame_app.input import create_player_command
@@ -40,7 +42,11 @@ class PygameApplication:
             pygame.display.set_caption("Earth Invasion Game")
             logical_surface = pygame.Surface(self.logical_size)
             player_image = load_player_image()
-            session = self._create_session(player_image.get_size())
+            meteor_image = load_meteor_image()
+            session = self._create_session(
+                player_image.get_size(),
+                meteor_image.get_size(),
+            )
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
             title_font = pygame.font.Font(None, 48)
             text_font = pygame.font.Font(None, 30)
@@ -82,6 +88,7 @@ class PygameApplication:
                     text_font,
                     session,
                     player_image,
+                    meteor_image,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -94,10 +101,12 @@ class PygameApplication:
         finally:
             pygame.quit()
 
-    def _create_session(self, player_size: Size) -> GameSession:
+    def _create_session(self, player_size: Size, meteor_size: Size) -> GameSession:
         player_width, player_height = player_size
+        meteor_width, meteor_height = meteor_size
         player_config = self.config.gameplay.player
         weapon_config = self.config.gameplay.weapon
+        meteor_config = self.config.gameplay.meteor
         return GameSession.create(
             world_width=self.logical_size[0],
             world_height=self.logical_size[1],
@@ -106,6 +115,12 @@ class PygameApplication:
             movement_speed=player_config.movement_speed_pixels_per_second,
             beam_speed=weapon_config.beam_speed_pixels_per_second,
             beam_cooldown_seconds=weapon_config.beam_cooldown_seconds,
+            meteor_width=meteor_width,
+            meteor_height=meteor_height,
+            meteor_spawn_interval_seconds=meteor_config.spawn_interval_seconds,
+            meteor_minimum_speed=meteor_config.minimum_speed_pixels_per_second,
+            meteor_maximum_speed=meteor_config.maximum_speed_pixels_per_second,
+            random_source=random.Random(),
         )
 
     def _draw_gameplay_preview(
@@ -115,10 +130,11 @@ class PygameApplication:
         text_font: pygame.font.Font,
         session: GameSession,
         player_image: pygame.Surface,
+        meteor_image: pygame.Surface,
     ) -> None:
         surface.fill(BACKGROUND_COLOR)
 
-        title = title_font.render("Movement and Beam", True, TITLE_COLOR)
+        title = title_font.render("Meteor Preview", True, TITLE_COLOR)
         title_rect = title.get_rect(center=(self.logical_size[0] // 2, 40))
         surface.blit(title, title_rect)
 
@@ -129,6 +145,10 @@ class PygameApplication:
         )
         profile_rect = profile.get_rect(center=(self.logical_size[0] // 2, 78))
         surface.blit(profile, profile_rect)
+
+        for meteor in session.meteors:
+            meteor_position = round(meteor.x), round(meteor.y)
+            surface.blit(meteor_image, meteor_position)
 
         player_position = round(session.player.x), round(session.player.y)
         surface.blit(player_image, player_position)

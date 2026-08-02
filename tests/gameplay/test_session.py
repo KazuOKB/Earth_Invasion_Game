@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from earth_invasion.gameplay.commands import PlayerCommand
@@ -86,7 +88,61 @@ def test_beam_is_removed_after_leaving_screen() -> None:
     assert session.beams == []
 
 
-def _create_session() -> GameSession:
+def test_meteor_spawns_after_configured_interval() -> None:
+    session = _create_session()
+
+    session.update(PlayerCommand(), elapsed_seconds=1.19)
+
+    assert session.meteors == []
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert len(session.meteors) == 1
+
+
+def test_meteor_spawns_inside_vertical_range_with_configured_speed() -> None:
+    session = _create_session()
+
+    session.update(PlayerCommand(), elapsed_seconds=1.2)
+
+    meteor = session.meteors[0]
+    assert meteor.x == 750.0
+    assert 0.0 <= meteor.y <= 370.0
+    assert 180.0 <= meteor.speed <= 300.0
+
+
+def test_meteor_randomness_is_repeatable_with_same_seed() -> None:
+    first_session = _create_session(random_seed=10)
+    second_session = _create_session(random_seed=10)
+
+    first_session.update(PlayerCommand(), elapsed_seconds=1.2)
+    second_session.update(PlayerCommand(), elapsed_seconds=1.2)
+
+    assert first_session.meteors == second_session.meteors
+
+
+def test_meteor_moves_at_its_own_speed() -> None:
+    session = _create_session()
+    session.update(PlayerCommand(), elapsed_seconds=1.2)
+    meteor = session.meteors[0]
+
+    session.update(PlayerCommand(), elapsed_seconds=0.5)
+
+    assert meteor.x == pytest.approx(750.0 - meteor.speed * 0.5)
+
+
+def test_meteor_is_removed_after_leaving_screen() -> None:
+    session = _create_session()
+    session.update(PlayerCommand(), elapsed_seconds=1.2)
+    meteor = session.meteors[0]
+    meteor.x = -float(meteor.width)
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.meteors == []
+
+
+def _create_session(random_seed: int = 1) -> GameSession:
     return GameSession.create(
         world_width=750,
         world_height=500,
@@ -95,4 +151,10 @@ def _create_session() -> GameSession:
         movement_speed=240.0,
         beam_speed=600.0,
         beam_cooldown_seconds=0.25,
+        meteor_width=130,
+        meteor_height=130,
+        meteor_spawn_interval_seconds=1.2,
+        meteor_minimum_speed=180.0,
+        meteor_maximum_speed=300.0,
+        random_source=random.Random(random_seed),
     )
