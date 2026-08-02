@@ -74,6 +74,7 @@ class GameSession:
             y=(world_height - player_settings.height) / 2,
             width=player_settings.width,
             height=player_settings.height,
+            health=player_settings.max_health,
         )
         return cls(
             world_width=world_width,
@@ -94,6 +95,7 @@ class GameSession:
         """プレイヤー、ビーム、敵を固定時間だけ更新する。"""
 
         _check_positive(elapsed_seconds, "elapsed_seconds")
+        self.player.update_invincibility(elapsed_seconds)
         self._move_player(command, elapsed_seconds)
         self._move_beams(elapsed_seconds)
         self._update_weapon(command, elapsed_seconds)
@@ -103,6 +105,7 @@ class GameSession:
         self._update_chaser_spawning(elapsed_seconds)
         self._resolve_beam_meteor_collisions()
         self._resolve_beam_chaser_collisions()
+        self._resolve_player_enemy_collisions()
         self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
 
     @property
@@ -116,6 +119,12 @@ class GameSession:
         """侵略ゲージが上限までたまっているか返す。"""
 
         return self.invasion_gauge >= self.invasion_settings.target
+
+    @property
+    def player_is_defeated(self) -> bool:
+        """プレイヤーの体力が0か返す。"""
+
+        return self.player.is_defeated
 
     def _move_player(self, command: PlayerCommand, elapsed_seconds: float) -> None:
         self.player.move_vertical(
@@ -276,6 +285,27 @@ class GameSession:
             self.invasion_gauge + points,
             self.invasion_settings.target,
         )
+
+    def _resolve_player_enemy_collisions(self) -> None:
+        meteor_count_before_collision = len(self.meteors)
+        chaser_count_before_collision = len(self.chasers)
+
+        self.meteors = [
+            meteor for meteor in self.meteors if not rectangles_overlap(self.player, meteor)
+        ]
+        self.chasers = [
+            chaser for chaser in self.chasers if not rectangles_overlap(self.player, chaser)
+        ]
+
+        enemy_touched_player = (
+            len(self.meteors) < meteor_count_before_collision
+            or len(self.chasers) < chaser_count_before_collision
+        )
+        if enemy_touched_player:
+            self.player.take_damage(
+                damage=1,
+                invincibility_seconds=self.player_settings.invincibility_seconds,
+            )
 
 
 def _check_positive(value: int | float, name: str) -> None:
