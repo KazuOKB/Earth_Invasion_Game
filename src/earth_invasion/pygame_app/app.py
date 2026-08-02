@@ -18,6 +18,10 @@ LETTERBOX_COLOR = (0, 0, 0)
 TITLE_COLOR = (255, 90, 30)
 TEXT_COLOR = (230, 235, 255)
 BEAM_COLOR = (100, 235, 255)
+GAUGE_COLOR = (255, 100, 40)
+GAUGE_BACKGROUND_COLOR = (45, 50, 70)
+GAUGE_WIDTH = 250
+GAUGE_HEIGHT = 14
 
 
 class PygameApplication:
@@ -120,6 +124,8 @@ class PygameApplication:
             meteor_spawn_interval_seconds=meteor_config.spawn_interval_seconds,
             meteor_minimum_speed=meteor_config.minimum_speed_pixels_per_second,
             meteor_maximum_speed=meteor_config.maximum_speed_pixels_per_second,
+            invasion_target=self.config.stage.invasion_target,
+            meteor_invasion_reward=self.config.gameplay.invasion_rewards.meteor,
             random_source=random.Random(),
         )
 
@@ -134,7 +140,7 @@ class PygameApplication:
     ) -> None:
         surface.fill(BACKGROUND_COLOR)
 
-        title = title_font.render("Meteor Preview", True, TITLE_COLOR)
+        title = title_font.render("Meteor Attack", True, TITLE_COLOR)
         title_rect = title.get_rect(center=(self.logical_size[0] // 2, 40))
         surface.blit(title, title_rect)
 
@@ -145,6 +151,8 @@ class PygameApplication:
         )
         profile_rect = profile.get_rect(center=(self.logical_size[0] // 2, 78))
         surface.blit(profile, profile_rect)
+
+        self._draw_invasion_gauge(surface, text_font, session)
 
         for meteor in session.meteors:
             meteor_position = round(meteor.x), round(meteor.y)
@@ -165,6 +173,30 @@ class PygameApplication:
         guide = text_font.render("Up / Down: Move    Z: Beam    Esc: Close", True, TEXT_COLOR)
         guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 475))
         surface.blit(guide, guide_rect)
+
+    def _draw_invasion_gauge(
+        self,
+        surface: pygame.Surface,
+        text_font: pygame.font.Font,
+        session: GameSession,
+    ) -> None:
+        gauge_x = (self.logical_size[0] - GAUGE_WIDTH) // 2
+        gauge_y = 105
+        gauge_ratio = session.invasion_gauge / session.invasion_target
+        filled_width = round(GAUGE_WIDTH * gauge_ratio)
+
+        background = pygame.Rect(gauge_x, gauge_y, GAUGE_WIDTH, GAUGE_HEIGHT)
+        filled = pygame.Rect(gauge_x, gauge_y, filled_width, GAUGE_HEIGHT)
+        pygame.draw.rect(surface, GAUGE_BACKGROUND_COLOR, background)
+        pygame.draw.rect(surface, GAUGE_COLOR, filled)
+
+        label = text_font.render(
+            f"Invasion: {session.invasion_gauge} / {session.invasion_target}",
+            True,
+            TEXT_COLOR,
+        )
+        label_rect = label.get_rect(center=(self.logical_size[0] // 2, 137))
+        surface.blit(label, label_rect)
 
     def _present(
         self,
