@@ -241,6 +241,17 @@ def test_chaser_spawns_inside_vertical_range() -> None:
     assert 0.0 <= chaser.y <= 471.0
 
 
+def test_meteor_and_chaser_stop_spawning_after_chaser_phase() -> None:
+    session = _create_session()
+    session.stage.update(elapsed_seconds=75.0, invasion_gauge_is_full=False)
+
+    session.update(PlayerCommand(), elapsed_seconds=1.2)
+
+    assert session.current_phase is GamePhase.SHOOTER
+    assert session.meteors == []
+    assert session.chasers == []
+
+
 def test_chaser_randomness_is_repeatable_with_same_seed() -> None:
     first_session = _create_session(random_seed=10)
     second_session = _create_session(random_seed=10)
