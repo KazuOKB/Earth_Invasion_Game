@@ -1,0 +1,19 @@
+{
+  "logical_resolution": {
+    "width": 750,
+    "height": 500
+  },
+  "updates_per_second": 60,
+  "player": {
+    "max_health": 3,
+    "invincibility_seconds": 1.0
+  },
+  "weapon": {
+    "beam_cooldown_seconds": 0.25
+  },
+  "invasion_rewards": {
+    "meteor": 2,
+    "chaser": 5,
+    "shooter": 10
+  }
+}

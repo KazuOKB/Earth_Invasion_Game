@@ -1,0 +1,22 @@
+{
+  "profile": "normal",
+  "invasion_target": 100,
+  "phases": [
+    {
+      "id": "meteor",
+      "duration_seconds": 30.0
+    },
+    {
+      "id": "chaser",
+      "duration_seconds": 45.0
+    },
+    {
+      "id": "shooter",
+      "duration_seconds": 60.0
+    },
+    {
+      "id": "boss",
+      "duration_seconds": null
+    }
+  ]
+}
