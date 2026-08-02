@@ -22,6 +22,7 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.logical_resolution.height == 500
     assert config.gameplay.player.max_health == 3
     assert config.gameplay.player.invincibility_seconds == 1.0
+    assert config.gameplay.player.movement_speed_pixels_per_second == 240.0
     assert config.gameplay.weapon.beam_cooldown_seconds == 0.25
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
@@ -55,16 +56,25 @@ def test_unknown_profile_is_rejected() -> None:
 
 def test_non_positive_health_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "gameplay.json"
-    data = {
-        "logical_resolution": {"width": 750, "height": 500},
-        "updates_per_second": 60,
-        "player": {"max_health": 0, "invincibility_seconds": 1.0},
-        "weapon": {"beam_cooldown_seconds": 0.25},
-        "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
-    }
+    data = _gameplay_config_data()
+    player = data["player"]
+    assert isinstance(player, dict)
+    player["max_health"] = 0
     path.write_text(json.dumps(data), encoding="utf-8")
 
     with pytest.raises(ConfigError, match="max_health"):
+        load_gameplay_config(path)
+
+
+def test_non_positive_movement_speed_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "gameplay.json"
+    data = _gameplay_config_data()
+    player = data["player"]
+    assert isinstance(player, dict)
+    player["movement_speed_pixels_per_second"] = 0
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="movement_speed_pixels_per_second"):
         load_gameplay_config(path)
 
 
@@ -133,4 +143,18 @@ def _stage_config_data(meteor_duration: int) -> dict[str, object]:
             {"id": "shooter", "duration_seconds": 30},
             {"id": "boss", "duration_seconds": None},
         ],
+    }
+
+
+def _gameplay_config_data() -> dict[str, object]:
+    return {
+        "logical_resolution": {"width": 750, "height": 500},
+        "updates_per_second": 60,
+        "player": {
+            "max_health": 3,
+            "invincibility_seconds": 1.0,
+            "movement_speed_pixels_per_second": 240.0,
+        },
+        "weapon": {"beam_cooldown_seconds": 0.25},
+        "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
     }

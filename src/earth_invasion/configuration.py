@@ -35,6 +35,7 @@ class PlayerConfig:
 
     max_health: int
     invincibility_seconds: float
+    movement_speed_pixels_per_second: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +129,11 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
             invincibility_seconds=_positive_number(
                 player,
                 "invincibility_seconds",
+                "player",
+            ),
+            movement_speed_pixels_per_second=_positive_number(
+                player,
+                "movement_speed_pixels_per_second",
                 "player",
             ),
         ),
