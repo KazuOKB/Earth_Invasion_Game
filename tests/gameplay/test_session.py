@@ -7,7 +7,15 @@ import random
 import pytest
 
 from earth_invasion.gameplay.commands import PlayerCommand
-from earth_invasion.gameplay.session import Beam, GameSession, Meteor
+from earth_invasion.gameplay.entities import Beam, Chaser, Meteor
+from earth_invasion.gameplay.session import GameSession
+from earth_invasion.gameplay.settings import (
+    ChaserSettings,
+    InvasionSettings,
+    MeteorSettings,
+    PlayerSettings,
+    WeaponSettings,
+)
 from earth_invasion.gameplay.stage import GamePhase, StageSchedule
 
 
@@ -209,22 +217,114 @@ def test_destroying_meteor_can_unlock_boss_phase() -> None:
     assert session.current_phase is GamePhase.BOSS
 
 
+def test_chaser_spawns_only_after_entering_chaser_phase() -> None:
+    session = _create_session()
+
+    session.update(PlayerCommand(), elapsed_seconds=0.8)
+
+    assert session.chasers == []
+
+    session.stage.update(elapsed_seconds=29.2, invasion_gauge_is_full=False)
+    session.update(PlayerCommand(), elapsed_seconds=0.8)
+
+    assert len(session.chasers) == 1
+
+
+def test_chaser_spawns_inside_vertical_range() -> None:
+    session = _create_session()
+    session.stage.update(elapsed_seconds=30.0, invasion_gauge_is_full=False)
+
+    session.update(PlayerCommand(), elapsed_seconds=0.8)
+
+    chaser = session.chasers[0]
+    assert chaser.x == 750.0
+    assert 0.0 <= chaser.y <= 471.0
+
+
+def test_chaser_randomness_is_repeatable_with_same_seed() -> None:
+    first_session = _create_session(random_seed=10)
+    second_session = _create_session(random_seed=10)
+    first_session.stage.update(elapsed_seconds=30.0, invasion_gauge_is_full=False)
+    second_session.stage.update(elapsed_seconds=30.0, invasion_gauge_is_full=False)
+
+    first_session.update(PlayerCommand(), elapsed_seconds=0.8)
+    second_session.update(PlayerCommand(), elapsed_seconds=0.8)
+
+    assert first_session.chasers == second_session.chasers
+
+
+def test_chaser_moves_left_and_tracks_player() -> None:
+    session = _create_session()
+    session.chasers.append(_create_chaser(x=500.0, y=0.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.5)
+
+    chaser = session.chasers[0]
+    assert chaser.x == 380.0
+    assert chaser.y == 90.0
+
+
+def test_chaser_does_not_move_past_player_center() -> None:
+    session = _create_session()
+    player_center_y = session.player.y + session.player.height / 2
+    session.chasers.append(_create_chaser(x=500.0, y=player_center_y - 20.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    chaser = session.chasers[0]
+    assert chaser.y + chaser.height / 2 == player_center_y
+
+
+def test_chaser_is_removed_after_leaving_screen() -> None:
+    session = _create_session()
+    chaser = _create_chaser(x=-35.0, y=200.0)
+    session.chasers.append(chaser)
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.chasers == []
+
+
+def test_beam_destroys_chaser_and_increases_invasion_gauge() -> None:
+    session = _create_session()
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.chasers.append(_create_chaser(x=310.0, y=195.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.beams == []
+    assert session.chasers == []
+    assert session.invasion_gauge == 5
+
+
 def _create_session(random_seed: int = 1) -> GameSession:
     return GameSession.create(
         world_width=750,
         world_height=500,
-        player_width=57,
-        player_height=38,
-        movement_speed=240.0,
-        beam_speed=600.0,
-        beam_cooldown_seconds=0.25,
-        meteor_width=130,
-        meteor_height=130,
-        meteor_spawn_interval_seconds=1.2,
-        meteor_minimum_speed=180.0,
-        meteor_maximum_speed=300.0,
-        invasion_target=100,
-        meteor_invasion_reward=2,
+        player_settings=PlayerSettings(width=57, height=38, movement_speed=240.0),
+        weapon_settings=WeaponSettings(
+            beam_speed=600.0,
+            beam_cooldown_seconds=0.25,
+        ),
+        meteor_settings=MeteorSettings(
+            width=130,
+            height=130,
+            spawn_interval_seconds=1.2,
+            minimum_speed=180.0,
+            maximum_speed=300.0,
+        ),
+        chaser_settings=ChaserSettings(
+            width=35,
+            height=29,
+            spawn_interval_seconds=0.8,
+            horizontal_speed=240.0,
+            tracking_speed=180.0,
+        ),
+        invasion_settings=InvasionSettings(
+            target=100,
+            meteor_reward=2,
+            chaser_reward=5,
+        ),
         stage_schedule=StageSchedule(
             meteor_duration_seconds=30.0,
             chaser_duration_seconds=45.0,
@@ -241,4 +341,15 @@ def _create_meteor(x: float, y: float) -> Meteor:
         width=130,
         height=130,
         speed=180.0,
+    )
+
+
+def _create_chaser(x: float, y: float) -> Chaser:
+    return Chaser(
+        x=x,
+        y=y,
+        width=35,
+        height=29,
+        horizontal_speed=240.0,
+        tracking_speed=180.0,
     )

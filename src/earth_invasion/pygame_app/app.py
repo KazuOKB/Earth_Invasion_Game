@@ -8,8 +8,19 @@ import pygame
 
 from earth_invasion.configuration import ApplicationConfig
 from earth_invasion.gameplay.session import GameSession
+from earth_invasion.gameplay.settings import (
+    ChaserSettings,
+    InvasionSettings,
+    MeteorSettings,
+    PlayerSettings,
+    WeaponSettings,
+)
 from earth_invasion.gameplay.stage import StageSchedule
-from earth_invasion.pygame_app.assets import load_meteor_image, load_player_image
+from earth_invasion.pygame_app.assets import (
+    load_chaser_image,
+    load_meteor_image,
+    load_player_image,
+)
 from earth_invasion.pygame_app.display import Size, calculate_viewport
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
 from earth_invasion.pygame_app.input import create_player_command
@@ -48,9 +59,11 @@ class PygameApplication:
             logical_surface = pygame.Surface(self.logical_size)
             player_image = load_player_image()
             meteor_image = load_meteor_image()
+            chaser_image = load_chaser_image()
             session = self._create_session(
                 player_image.get_size(),
                 meteor_image.get_size(),
+                chaser_image.get_size(),
             )
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
             title_font = pygame.font.Font(None, 48)
@@ -94,6 +107,7 @@ class PygameApplication:
                     session,
                     player_image,
                     meteor_image,
+                    chaser_image,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -106,28 +120,52 @@ class PygameApplication:
         finally:
             pygame.quit()
 
-    def _create_session(self, player_size: Size, meteor_size: Size) -> GameSession:
+    def _create_session(
+        self,
+        player_size: Size,
+        meteor_size: Size,
+        chaser_size: Size,
+    ) -> GameSession:
         player_width, player_height = player_size
         meteor_width, meteor_height = meteor_size
+        chaser_width, chaser_height = chaser_size
         player_config = self.config.gameplay.player
         weapon_config = self.config.gameplay.weapon
         meteor_config = self.config.gameplay.meteor
+        chaser_config = self.config.gameplay.chaser
+        invasion_rewards = self.config.gameplay.invasion_rewards
         stage_config = self.config.stage
         return GameSession.create(
             world_width=self.logical_size[0],
             world_height=self.logical_size[1],
-            player_width=player_width,
-            player_height=player_height,
-            movement_speed=player_config.movement_speed_pixels_per_second,
-            beam_speed=weapon_config.beam_speed_pixels_per_second,
-            beam_cooldown_seconds=weapon_config.beam_cooldown_seconds,
-            meteor_width=meteor_width,
-            meteor_height=meteor_height,
-            meteor_spawn_interval_seconds=meteor_config.spawn_interval_seconds,
-            meteor_minimum_speed=meteor_config.minimum_speed_pixels_per_second,
-            meteor_maximum_speed=meteor_config.maximum_speed_pixels_per_second,
-            invasion_target=self.config.stage.invasion_target,
-            meteor_invasion_reward=self.config.gameplay.invasion_rewards.meteor,
+            player_settings=PlayerSettings(
+                width=player_width,
+                height=player_height,
+                movement_speed=player_config.movement_speed_pixels_per_second,
+            ),
+            weapon_settings=WeaponSettings(
+                beam_speed=weapon_config.beam_speed_pixels_per_second,
+                beam_cooldown_seconds=weapon_config.beam_cooldown_seconds,
+            ),
+            meteor_settings=MeteorSettings(
+                width=meteor_width,
+                height=meteor_height,
+                spawn_interval_seconds=meteor_config.spawn_interval_seconds,
+                minimum_speed=meteor_config.minimum_speed_pixels_per_second,
+                maximum_speed=meteor_config.maximum_speed_pixels_per_second,
+            ),
+            chaser_settings=ChaserSettings(
+                width=chaser_width,
+                height=chaser_height,
+                spawn_interval_seconds=chaser_config.spawn_interval_seconds,
+                horizontal_speed=chaser_config.horizontal_speed_pixels_per_second,
+                tracking_speed=chaser_config.tracking_speed_pixels_per_second,
+            ),
+            invasion_settings=InvasionSettings(
+                target=stage_config.invasion_target,
+                meteor_reward=invasion_rewards.meteor,
+                chaser_reward=invasion_rewards.chaser,
+            ),
             stage_schedule=StageSchedule(
                 meteor_duration_seconds=stage_config.duration_seconds_for("meteor"),
                 chaser_duration_seconds=stage_config.duration_seconds_for("chaser"),
@@ -144,10 +182,11 @@ class PygameApplication:
         session: GameSession,
         player_image: pygame.Surface,
         meteor_image: pygame.Surface,
+        chaser_image: pygame.Surface,
     ) -> None:
         surface.fill(BACKGROUND_COLOR)
 
-        title = title_font.render("Meteor Attack", True, TITLE_COLOR)
+        title = title_font.render("Earth Invasion", True, TITLE_COLOR)
         title_rect = title.get_rect(center=(self.logical_size[0] // 2, 40))
         surface.blit(title, title_rect)
 
@@ -167,6 +206,10 @@ class PygameApplication:
         for meteor in session.meteors:
             meteor_position = round(meteor.x), round(meteor.y)
             surface.blit(meteor_image, meteor_position)
+
+        for chaser in session.chasers:
+            chaser_position = round(chaser.x), round(chaser.y)
+            surface.blit(chaser_image, chaser_position)
 
         player_position = round(session.player.x), round(session.player.y)
         surface.blit(player_image, player_position)
@@ -192,7 +235,8 @@ class PygameApplication:
     ) -> None:
         gauge_x = (self.logical_size[0] - GAUGE_WIDTH) // 2
         gauge_y = 105
-        gauge_ratio = session.invasion_gauge / session.invasion_target
+        invasion_target = session.invasion_settings.target
+        gauge_ratio = session.invasion_gauge / invasion_target
         filled_width = round(GAUGE_WIDTH * gauge_ratio)
 
         background = pygame.Rect(gauge_x, gauge_y, GAUGE_WIDTH, GAUGE_HEIGHT)
@@ -201,7 +245,7 @@ class PygameApplication:
         pygame.draw.rect(surface, GAUGE_COLOR, filled)
 
         label = text_font.render(
-            f"Invasion: {session.invasion_gauge} / {session.invasion_target}",
+            f"Invasion: {session.invasion_gauge} / {invasion_target}",
             True,
             TEXT_COLOR,
         )

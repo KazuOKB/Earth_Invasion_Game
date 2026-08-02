@@ -56,6 +56,15 @@ class MeteorConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ChaserConfig:
+    """追尾敵の出現と移動の設定。"""
+
+    spawn_interval_seconds: float
+    horizontal_speed_pixels_per_second: float
+    tracking_speed_pixels_per_second: float
+
+
+@dataclass(frozen=True, slots=True)
 class InvasionRewards:
     """敵を倒したときに増える侵略ゲージの量。"""
 
@@ -73,6 +82,7 @@ class GameplayConfig:
     player: PlayerConfig
     weapon: WeaponConfig
     meteor: MeteorConfig
+    chaser: ChaserConfig
     invasion_rewards: InvasionRewards
 
 
@@ -140,6 +150,7 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     player = _required_object(data, "player", "gameplay")
     weapon = _required_object(data, "weapon", "gameplay")
     meteor = _required_object(data, "meteor", "gameplay")
+    chaser = _required_object(data, "chaser", "gameplay")
     rewards = _required_object(data, "invasion_rewards", "gameplay")
 
     meteor_config = _parse_meteor_config(meteor)
@@ -176,6 +187,23 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
             ),
         ),
         meteor=meteor_config,
+        chaser=ChaserConfig(
+            spawn_interval_seconds=_positive_number(
+                chaser,
+                "spawn_interval_seconds",
+                "chaser",
+            ),
+            horizontal_speed_pixels_per_second=_positive_number(
+                chaser,
+                "horizontal_speed_pixels_per_second",
+                "chaser",
+            ),
+            tracking_speed_pixels_per_second=_positive_number(
+                chaser,
+                "tracking_speed_pixels_per_second",
+                "chaser",
+            ),
+        ),
         invasion_rewards=InvasionRewards(
             meteor=_positive_int(rewards, "meteor", "invasion_rewards"),
             chaser=_positive_int(rewards, "chaser", "invasion_rewards"),

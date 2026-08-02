@@ -18,6 +18,11 @@
     "minimum_speed_pixels_per_second": 180.0,
     "maximum_speed_pixels_per_second": 300.0
   },
+  "chaser": {
+    "spawn_interval_seconds": 0.8,
+    "horizontal_speed_pixels_per_second": 240.0,
+    "tracking_speed_pixels_per_second": 180.0
+  },
   "invasion_rewards": {
     "meteor": 2,
     "chaser": 5,
