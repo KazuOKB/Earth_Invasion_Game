@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 from earth_invasion.gameplay.commands import PlayerCommand
 from earth_invasion.gameplay.geometry import rectangles_overlap
+from earth_invasion.gameplay.stage import GamePhase, StageProgress, StageSchedule
 
 PLAYER_START_X = 100.0
 BEAM_WIDTH = 24
@@ -61,6 +62,7 @@ class GameSession:
     meteor_maximum_speed: float
     invasion_target: int
     meteor_invasion_reward: int
+    stage: StageProgress
     random_source: random.Random
     player: Player
     beams: list[Beam] = field(default_factory=list)
@@ -86,6 +88,7 @@ class GameSession:
         meteor_maximum_speed: float,
         invasion_target: int,
         meteor_invasion_reward: int,
+        stage_schedule: StageSchedule,
         random_source: random.Random,
     ) -> GameSession:
         """プレイヤーを画面左側の上下中央に配置する。"""
@@ -132,6 +135,7 @@ class GameSession:
             meteor_maximum_speed=meteor_maximum_speed,
             invasion_target=invasion_target,
             meteor_invasion_reward=meteor_invasion_reward,
+            stage=StageProgress(schedule=stage_schedule),
             random_source=random_source,
             player=player,
             meteor_spawn_remaining=meteor_spawn_interval_seconds,
@@ -147,6 +151,13 @@ class GameSession:
         self._move_meteors(elapsed_seconds)
         self._update_meteor_spawning(elapsed_seconds)
         self._resolve_beam_meteor_collisions()
+        self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
+
+    @property
+    def current_phase(self) -> GamePhase:
+        """現在のステージ区間を返す。"""
+
+        return self.stage.phase
 
     @property
     def invasion_gauge_is_full(self) -> bool:

@@ -92,6 +92,18 @@ class StageConfig:
     invasion_target: int
     phases: tuple[PhaseConfig, ...]
 
+    def duration_seconds_for(self, phase_id: str) -> float:
+        """指定した時間制限付き区間の長さを返す。"""
+
+        for phase in self.phases:
+            if phase.id != phase_id:
+                continue
+            if phase.duration_seconds is None:
+                raise ConfigError(f"{phase_id}区間には時間制限がありません")
+            return phase.duration_seconds
+
+        raise ConfigError(f"{phase_id}区間が見つかりません")
+
 
 @dataclass(frozen=True, slots=True)
 class ApplicationConfig:
