@@ -7,7 +7,7 @@ import random
 import pytest
 
 from earth_invasion.gameplay.commands import PlayerCommand
-from earth_invasion.gameplay.session import GameSession
+from earth_invasion.gameplay.session import Beam, GameSession, Meteor
 
 
 def test_player_starts_on_left_and_vertical_center() -> None:
@@ -142,6 +142,59 @@ def test_meteor_is_removed_after_leaving_screen() -> None:
     assert session.meteors == []
 
 
+def test_beam_destroys_meteor_and_increases_invasion_gauge() -> None:
+    session = _create_session()
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.meteors.append(_create_meteor(x=310.0, y=190.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.beams == []
+    assert session.meteors == []
+    assert session.invasion_gauge == 2
+
+
+def test_beam_and_meteor_remain_when_they_do_not_overlap() -> None:
+    session = _create_session()
+    session.beams.append(Beam(x=200.0, y=200.0))
+    session.meteors.append(_create_meteor(x=600.0, y=200.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert len(session.beams) == 1
+    assert len(session.meteors) == 1
+    assert session.invasion_gauge == 0
+
+
+def test_one_beam_destroys_only_one_meteor() -> None:
+    session = _create_session()
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.meteors.extend(
+        [
+            _create_meteor(x=310.0, y=190.0),
+            _create_meteor(x=315.0, y=195.0),
+        ]
+    )
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.beams == []
+    assert len(session.meteors) == 1
+    assert session.invasion_gauge == 2
+
+
+def test_invasion_gauge_stops_at_target() -> None:
+    session = _create_session()
+    session.invasion_gauge = 99
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.meteors.append(_create_meteor(x=310.0, y=190.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.invasion_gauge == 100
+    assert session.invasion_gauge_is_full
+
+
 def _create_session(random_seed: int = 1) -> GameSession:
     return GameSession.create(
         world_width=750,
@@ -156,5 +209,17 @@ def _create_session(random_seed: int = 1) -> GameSession:
         meteor_spawn_interval_seconds=1.2,
         meteor_minimum_speed=180.0,
         meteor_maximum_speed=300.0,
+        invasion_target=100,
+        meteor_invasion_reward=2,
         random_source=random.Random(random_seed),
+    )
+
+
+def _create_meteor(x: float, y: float) -> Meteor:
+    return Meteor(
+        x=x,
+        y=y,
+        width=130,
+        height=130,
+        speed=180.0,
     )

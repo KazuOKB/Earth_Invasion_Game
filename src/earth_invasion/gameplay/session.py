@@ -6,6 +6,7 @@ import random
 from dataclasses import dataclass, field
 
 from earth_invasion.gameplay.commands import PlayerCommand
+from earth_invasion.gameplay.geometry import rectangles_overlap
 
 PLAYER_START_X = 100.0
 BEAM_WIDTH = 24
@@ -58,12 +59,15 @@ class GameSession:
     meteor_spawn_interval_seconds: float
     meteor_minimum_speed: float
     meteor_maximum_speed: float
+    invasion_target: int
+    meteor_invasion_reward: int
     random_source: random.Random
     player: Player
     beams: list[Beam] = field(default_factory=list)
     meteors: list[Meteor] = field(default_factory=list)
     beam_cooldown_remaining: float = 0.0
     meteor_spawn_remaining: float = 0.0
+    invasion_gauge: int = 0
 
     @classmethod
     def create(
@@ -80,6 +84,8 @@ class GameSession:
         meteor_spawn_interval_seconds: float,
         meteor_minimum_speed: float,
         meteor_maximum_speed: float,
+        invasion_target: int,
+        meteor_invasion_reward: int,
         random_source: random.Random,
     ) -> GameSession:
         """プレイヤーを画面左側の上下中央に配置する。"""
@@ -96,6 +102,8 @@ class GameSession:
         _check_positive(meteor_spawn_interval_seconds, "meteor_spawn_interval_seconds")
         _check_positive(meteor_minimum_speed, "meteor_minimum_speed")
         _check_positive(meteor_maximum_speed, "meteor_maximum_speed")
+        _check_positive(invasion_target, "invasion_target")
+        _check_positive(meteor_invasion_reward, "meteor_invasion_reward")
 
         if meteor_minimum_speed > meteor_maximum_speed:
             raise ValueError("meteor_minimum_speedはmeteor_maximum_speed以下にしてください")
@@ -122,6 +130,8 @@ class GameSession:
             meteor_spawn_interval_seconds=meteor_spawn_interval_seconds,
             meteor_minimum_speed=meteor_minimum_speed,
             meteor_maximum_speed=meteor_maximum_speed,
+            invasion_target=invasion_target,
+            meteor_invasion_reward=meteor_invasion_reward,
             random_source=random_source,
             player=player,
             meteor_spawn_remaining=meteor_spawn_interval_seconds,
@@ -136,6 +146,13 @@ class GameSession:
         self._update_weapon(command, elapsed_seconds)
         self._move_meteors(elapsed_seconds)
         self._update_meteor_spawning(elapsed_seconds)
+        self._resolve_beam_meteor_collisions()
+
+    @property
+    def invasion_gauge_is_full(self) -> bool:
+        """侵略ゲージが上限までたまっているか返す。"""
+
+        return self.invasion_gauge >= self.invasion_target
 
     def _move_player(self, command: PlayerCommand, elapsed_seconds: float) -> None:
         movement = command.vertical_direction * self.movement_speed * elapsed_seconds
@@ -192,6 +209,37 @@ class GameSession:
                     self.meteor_maximum_speed,
                 ),
             )
+        )
+
+    def _resolve_beam_meteor_collisions(self) -> None:
+        remaining_beams: list[Beam] = []
+        remaining_meteors = list(self.meteors)
+        destroyed_meteor_count = 0
+
+        for beam in self.beams:
+            hit_index = next(
+                (
+                    index
+                    for index, meteor in enumerate(remaining_meteors)
+                    if rectangles_overlap(beam, meteor)
+                ),
+                None,
+            )
+
+            if hit_index is None:
+                remaining_beams.append(beam)
+                continue
+
+            remaining_meteors.pop(hit_index)
+            destroyed_meteor_count += 1
+
+        self.beams = remaining_beams
+        self.meteors = remaining_meteors
+
+        gained_points = destroyed_meteor_count * self.meteor_invasion_reward
+        self.invasion_gauge = min(
+            self.invasion_gauge + gained_points,
+            self.invasion_target,
         )
 
 
