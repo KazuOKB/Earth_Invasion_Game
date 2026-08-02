@@ -1,20 +1,25 @@
-# ライブラリ
-node_modules/
+# Python
+__pycache__/
+*.py[cod]
 .venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# ビルド・生成物
-dist/
+# ビルド結果
 build/
+dist/
+*.egg-info/
 
-# エディタ・OSの設定ファイル
+# エディタ・OS
 .vscode/
+.idea/
 .DS_Store
 
-# バイナリ・重いファイル
-*.zip
+# ログ
 *.log
-*.mp4
-*.mov
-*.jpg
-*.png
-*.pdf
+
+# TypeScriptへ移行する場合の依存関係
+node_modules/
