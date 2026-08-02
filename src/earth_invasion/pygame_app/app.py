@@ -8,6 +8,7 @@ import pygame
 
 from earth_invasion.configuration import ApplicationConfig
 from earth_invasion.gameplay.session import GameSession
+from earth_invasion.gameplay.stage import StageSchedule
 from earth_invasion.pygame_app.assets import load_meteor_image, load_player_image
 from earth_invasion.pygame_app.display import Size, calculate_viewport
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
@@ -111,6 +112,7 @@ class PygameApplication:
         player_config = self.config.gameplay.player
         weapon_config = self.config.gameplay.weapon
         meteor_config = self.config.gameplay.meteor
+        stage_config = self.config.stage
         return GameSession.create(
             world_width=self.logical_size[0],
             world_height=self.logical_size[1],
@@ -126,6 +128,11 @@ class PygameApplication:
             meteor_maximum_speed=meteor_config.maximum_speed_pixels_per_second,
             invasion_target=self.config.stage.invasion_target,
             meteor_invasion_reward=self.config.gameplay.invasion_rewards.meteor,
+            stage_schedule=StageSchedule(
+                meteor_duration_seconds=stage_config.duration_seconds_for("meteor"),
+                chaser_duration_seconds=stage_config.duration_seconds_for("chaser"),
+                shooter_duration_seconds=stage_config.duration_seconds_for("shooter"),
+            ),
             random_source=random.Random(),
         )
 
@@ -144,13 +151,16 @@ class PygameApplication:
         title_rect = title.get_rect(center=(self.logical_size[0] // 2, 40))
         surface.blit(title, title_rect)
 
-        profile = text_font.render(
-            f"Stage profile: {self.config.stage.profile}",
+        remaining_seconds = session.stage.remaining_seconds
+        remaining_text = "no limit" if remaining_seconds is None else f"{remaining_seconds:.1f}s"
+        stage_status = text_font.render(
+            f"Profile: {self.config.stage.profile}    "
+            f"Phase: {session.current_phase.value}    Time: {remaining_text}",
             True,
             TEXT_COLOR,
         )
-        profile_rect = profile.get_rect(center=(self.logical_size[0] // 2, 78))
-        surface.blit(profile, profile_rect)
+        stage_status_rect = stage_status.get_rect(center=(self.logical_size[0] // 2, 78))
+        surface.blit(stage_status, stage_status_rect)
 
         self._draw_invasion_gauge(surface, text_font, session)
 

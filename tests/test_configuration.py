@@ -33,6 +33,9 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.invasion_rewards.shooter == 10
     assert config.stage.profile == "normal"
     assert config.stage.invasion_target == 100
+    assert config.stage.duration_seconds_for("meteor") == 30.0
+    assert config.stage.duration_seconds_for("chaser") == 45.0
+    assert config.stage.duration_seconds_for("shooter") == 60.0
     assert [phase.id for phase in config.stage.phases] == [
         "meteor",
         "chaser",
@@ -56,6 +59,13 @@ def test_test_profile_uses_short_durations() -> None:
 def test_unknown_profile_is_rejected() -> None:
     with pytest.raises(ConfigError, match="不明なステージ設定"):
         load_application_config("unknown")
+
+
+def test_boss_has_no_timed_duration() -> None:
+    config = load_application_config("normal")
+
+    with pytest.raises(ConfigError, match="時間制限がありません"):
+        config.stage.duration_seconds_for("boss")
 
 
 def test_non_positive_health_is_rejected(tmp_path: Path) -> None:

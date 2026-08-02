@@ -8,6 +8,7 @@ import pytest
 
 from earth_invasion.gameplay.commands import PlayerCommand
 from earth_invasion.gameplay.session import Beam, GameSession, Meteor
+from earth_invasion.gameplay.stage import GamePhase, StageSchedule
 
 
 def test_player_starts_on_left_and_vertical_center() -> None:
@@ -195,6 +196,19 @@ def test_invasion_gauge_stops_at_target() -> None:
     assert session.invasion_gauge_is_full
 
 
+def test_destroying_meteor_can_unlock_boss_phase() -> None:
+    session = _create_session()
+    session.invasion_gauge = 99
+    session.stage.update(elapsed_seconds=135.0, invasion_gauge_is_full=False)
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.meteors.append(_create_meteor(x=310.0, y=190.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.invasion_gauge_is_full
+    assert session.current_phase is GamePhase.BOSS
+
+
 def _create_session(random_seed: int = 1) -> GameSession:
     return GameSession.create(
         world_width=750,
@@ -211,6 +225,11 @@ def _create_session(random_seed: int = 1) -> GameSession:
         meteor_maximum_speed=300.0,
         invasion_target=100,
         meteor_invasion_reward=2,
+        stage_schedule=StageSchedule(
+            meteor_duration_seconds=30.0,
+            chaser_duration_seconds=45.0,
+            shooter_duration_seconds=60.0,
+        ),
         random_source=random.Random(random_seed),
     )
 
