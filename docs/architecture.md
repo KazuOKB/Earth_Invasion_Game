@@ -63,7 +63,8 @@ Earth_Invasion_Game/
 │       │   ├── geometry.py
 │       │   ├── settings.py
 │       │   ├── session.py
-│       │   └── stage.py
+│       │   ├── stage.py
+│       │   └── status.py
 │       └── pygame_app/
 │           ├── app.py
 │           ├── input.py
@@ -157,11 +158,18 @@ class GamePhase(Enum):
     CHASER = auto()
     SHOOTER = auto()
     BOSS = auto()
-    CLEARED = auto()
+```
+
+ゲーム全体の状態は別の名前で管理します。
+
+```python
+class GameStatus(Enum):
+    PLAYING = auto()
     GAME_OVER = auto()
 ```
 
-この名前はJSONの`id`と対応させます。
+`GamePhase`の名前はJSONの`id`と対応させます。
+`GameStatus`はプレイ中か終了しているかを表します。
 
 現在の区間と経過時間は`StageProgress`が管理します。
 区間ごとの時間は`StageSchedule`へ渡します。
@@ -374,6 +382,10 @@ random_source = random.Random(seed)
 - 無敵時間中は追加のダメージを受けない
 - 無敵時間の終了後は再びダメージを受ける
 - 体力が0未満にならない
+- 体力が0になるとゲームオーバーになる
+- ゲームオーバー後は位置、時間、敵が更新されない
+- 再挑戦で体力、敵、弾、ゲージ、区間が初期化される
+- 再挑戦後にゲームを再び更新できる
 - 時間で区間が進む
 - テスト設定では短時間でボスまで進む
 - 敵を倒すと侵略ゲージが増える
@@ -383,7 +395,6 @@ random_source = random.Random(seed)
 - ビームは発射間隔より早く発射されない
 - 攻撃が当たると体力が減る
 - ボスを倒すとクリアになる
-- 体力が0になるとゲームオーバーになる
 - 同じ乱数シードで同じ結果になる
 
 Pygame側では最低限の起動テストを行います。
