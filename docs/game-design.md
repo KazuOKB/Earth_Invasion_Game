@@ -58,8 +58,8 @@
 ステージ時間はJSONで管理します。
 Pythonコードには直接書きません。
 
-通常用の設定は`assets/data/stages.normal.json`です。
-短い動作確認には`assets/data/stages.test.json`を使います。
+通常用の設定は`src/earth_invasion/data/stages.normal.json`です。
+短い動作確認には`src/earth_invasion/data/stages.test.json`を使います。
 
 初期値は次のとおりです。
 

@@ -43,16 +43,16 @@ Earth_Invasion_Game/
 │   └── architecture.md
 ├── assets/
 │   ├── images/
-│   ├── sounds/
-│   └── data/
-│       ├── gameplay.json
-│       ├── stages.normal.json
-│       └── stages.test.json
+│   └── sounds/
 ├── src/
 │   └── earth_invasion/
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── configuration.py
+│       ├── data/
+│       │   ├── gameplay.json
+│       │   ├── stages.normal.json
+│       │   └── stages.test.json
 │       ├── gameplay/
 │       │   ├── commands.py
 │       │   ├── events.py
@@ -167,7 +167,10 @@ Pygameのタイマーイベントでステージを進めません。
 
 ## 10. ステージ設定
 
-ステージ時間はJSONから読み込みます。
+ステージ時間は`src/earth_invasion/data/`のJSONから読み込みます。
+
+設定をPythonパッケージ内に置くことで、インストール後も読み込めます。
+起動時に`--data-directory`を指定すると、別の設定へ差し替えられます。
 
 通常用とテスト用は同じ形式にします。
 

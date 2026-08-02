@@ -102,6 +102,20 @@ def test_boss_duration_must_be_null(tmp_path: Path) -> None:
         load_stage_config(path)
 
 
+def test_boss_duration_is_required(tmp_path: Path) -> None:
+    path = tmp_path / "stage.json"
+    data = _stage_config_data(meteor_duration=10)
+    phases = data["phases"]
+    assert isinstance(phases, list)
+    boss = phases[-1]
+    assert isinstance(boss, dict)
+    del boss["duration_seconds"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="duration_seconds"):
+        load_stage_config(path)
+
+
 def _write_stage_config(path: Path, meteor_duration: int) -> None:
     path.write_text(
         json.dumps(_stage_config_data(meteor_duration)),

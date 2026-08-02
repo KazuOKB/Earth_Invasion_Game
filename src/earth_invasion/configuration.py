@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from importlib.resources import files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import cast
 
 PHASE_ORDER = ("meteor", "chaser", "shooter", "boss")
 STAGE_PROFILES = ("normal", "test")
-DEFAULT_DATA_DIRECTORY = Path(__file__).resolve().parents[2] / "assets" / "data"
+DEFAULT_DATA_PACKAGE = "earth_invasion.data"
 
 JsonObject = dict[str, object]
+ConfigFile = Path | Traversable
 
 
 class ConfigError(ValueError):
@@ -96,9 +99,8 @@ def load_application_config(
         choices = ", ".join(STAGE_PROFILES)
         raise ConfigError(f"不明なステージ設定です: {profile}。使用可能: {choices}")
 
-    directory = data_directory or DEFAULT_DATA_DIRECTORY
-    gameplay = load_gameplay_config(directory / "gameplay.json")
-    stage = load_stage_config(directory / f"stages.{profile}.json")
+    gameplay = load_gameplay_config(_data_file(data_directory, "gameplay.json"))
+    stage = load_stage_config(_data_file(data_directory, f"stages.{profile}.json"))
 
     if stage.profile != profile:
         raise ConfigError(f"ファイル名の設定は{profile}ですが、profileは{stage.profile}です")
@@ -106,7 +108,7 @@ def load_application_config(
     return ApplicationConfig(gameplay=gameplay, stage=stage)
 
 
-def load_gameplay_config(path: Path) -> GameplayConfig:
+def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     """共通ゲーム設定を読み込む。"""
 
     data = _read_json_object(path)
@@ -144,7 +146,7 @@ def load_gameplay_config(path: Path) -> GameplayConfig:
     )
 
 
-def load_stage_config(path: Path) -> StageConfig:
+def load_stage_config(path: ConfigFile) -> StageConfig:
     """1つのステージ設定を読み込む。"""
 
     data = _read_json_object(path)
@@ -171,7 +173,7 @@ def _parse_phase(value: object, index: int) -> PhaseConfig:
     location = f"phases[{index}]"
     phase = _as_json_object(value, location)
     phase_id = _required_string(phase, "id", location)
-    duration = phase.get("duration_seconds")
+    duration = _required_value(phase, "duration_seconds", location)
 
     if phase_id == "boss":
         if duration is not None:
@@ -187,7 +189,13 @@ def _parse_phase(value: object, index: int) -> PhaseConfig:
     )
 
 
-def _read_json_object(path: Path) -> JsonObject:
+def _data_file(data_directory: Path | None, filename: str) -> ConfigFile:
+    if data_directory is not None:
+        return data_directory / filename
+    return files(DEFAULT_DATA_PACKAGE).joinpath(filename)
+
+
+def _read_json_object(path: ConfigFile) -> JsonObject:
     try:
         text = path.read_text(encoding="utf-8")
         value: object = json.loads(text)
