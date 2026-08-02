@@ -16,6 +16,7 @@ from earth_invasion.gameplay.settings import (
     WeaponSettings,
 )
 from earth_invasion.gameplay.stage import GamePhase, StageProgress, StageSchedule
+from earth_invasion.gameplay.status import GameStatus
 
 PLAYER_START_X = 100.0
 TIME_EPSILON = 1e-9
@@ -35,6 +36,7 @@ class GameSession:
     stage: StageProgress
     random_source: random.Random
     player: Player
+    status: GameStatus = GameStatus.PLAYING
     beams: list[Beam] = field(default_factory=list)
     meteors: list[Meteor] = field(default_factory=list)
     chasers: list[Chaser] = field(default_factory=list)
@@ -69,13 +71,7 @@ class GameSession:
         if chaser_settings.width > world_width or chaser_settings.height > world_height:
             raise ValueError("追尾敵の大きさはゲーム画面以下にしてください")
 
-        player = Player(
-            x=min(PLAYER_START_X, float(world_width - player_settings.width)),
-            y=(world_height - player_settings.height) / 2,
-            width=player_settings.width,
-            height=player_settings.height,
-            health=player_settings.max_health,
-        )
+        player = _create_player(world_width, world_height, player_settings)
         return cls(
             world_width=world_width,
             world_height=world_height,
@@ -95,6 +91,9 @@ class GameSession:
         """プレイヤー、ビーム、敵を固定時間だけ更新する。"""
 
         _check_positive(elapsed_seconds, "elapsed_seconds")
+        if self.status is GameStatus.GAME_OVER:
+            return
+
         self.player.update_invincibility(elapsed_seconds)
         self._move_player(command, elapsed_seconds)
         self._move_beams(elapsed_seconds)
@@ -125,6 +124,30 @@ class GameSession:
         """プレイヤーの体力が0か返す。"""
 
         return self.player.is_defeated
+
+    @property
+    def is_game_over(self) -> bool:
+        """ゲームオーバー状態か返す。"""
+
+        return self.status is GameStatus.GAME_OVER
+
+    def restart(self) -> None:
+        """すべてのゲーム状態を初期値へ戻す。"""
+
+        self.player = _create_player(
+            self.world_width,
+            self.world_height,
+            self.player_settings,
+        )
+        self.stage = StageProgress(schedule=self.stage.schedule)
+        self.beams = []
+        self.meteors = []
+        self.chasers = []
+        self.beam_cooldown_remaining = 0.0
+        self.meteor_spawn_remaining = self.meteor_settings.spawn_interval_seconds
+        self.chaser_spawn_remaining = self.chaser_settings.spawn_interval_seconds
+        self.invasion_gauge = 0
+        self.status = GameStatus.PLAYING
 
     def _move_player(self, command: PlayerCommand, elapsed_seconds: float) -> None:
         self.player.move_vertical(
@@ -306,6 +329,23 @@ class GameSession:
                 damage=1,
                 invincibility_seconds=self.player_settings.invincibility_seconds,
             )
+
+        if self.player.is_defeated:
+            self.status = GameStatus.GAME_OVER
+
+
+def _create_player(
+    world_width: int,
+    world_height: int,
+    settings: PlayerSettings,
+) -> Player:
+    return Player(
+        x=min(PLAYER_START_X, float(world_width - settings.width)),
+        y=(world_height - settings.height) / 2,
+        width=settings.width,
+        height=settings.height,
+        health=settings.max_health,
+    )
 
 
 def _check_positive(value: int | float, name: str) -> None:

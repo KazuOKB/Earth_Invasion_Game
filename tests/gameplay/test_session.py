@@ -381,6 +381,73 @@ def test_player_health_does_not_fall_below_zero() -> None:
     assert session.player_is_defeated
 
 
+def test_zero_health_changes_status_to_game_over() -> None:
+    session = _create_session()
+
+    _trigger_game_over(session)
+
+    assert session.is_game_over
+
+
+def test_game_over_stops_game_updates() -> None:
+    session = _create_session()
+    session.beams.append(Beam(x=200.0, y=100.0))
+    session.chasers.append(_create_chaser(x=600.0, y=100.0))
+    _trigger_game_over(session)
+    player_y = session.player.y
+    beam_x = session.beams[0].x
+    chaser_x = session.chasers[0].x
+    stage_elapsed_seconds = session.stage.elapsed_seconds
+    invincibility_remaining = session.player.invincibility_remaining
+
+    session.update(
+        PlayerCommand(vertical_direction=1, fire_pressed=True),
+        elapsed_seconds=0.5,
+    )
+
+    assert session.player.y == player_y
+    assert session.stage.elapsed_seconds == stage_elapsed_seconds
+    assert session.player.invincibility_remaining == invincibility_remaining
+    assert session.beams[0].x == beam_x
+    assert session.chasers[0].x == chaser_x
+
+
+def test_restart_resets_all_game_state() -> None:
+    session = _create_session()
+    session.invasion_gauge = 50
+    session.stage.update(elapsed_seconds=30.0, invasion_gauge_is_full=False)
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.chasers.append(_create_chaser(x=600.0, y=100.0))
+    _trigger_game_over(session)
+
+    session.restart()
+
+    assert not session.is_game_over
+    assert session.player.health == 3
+    assert session.player.x == 100.0
+    assert session.player.y == 231.0
+    assert session.player.invincibility_remaining == 0.0
+    assert session.current_phase is GamePhase.METEOR
+    assert session.stage.elapsed_seconds == 0.0
+    assert session.invasion_gauge == 0
+    assert session.beams == []
+    assert session.meteors == []
+    assert session.chasers == []
+    assert session.beam_cooldown_remaining == 0.0
+    assert session.meteor_spawn_remaining == 1.2
+    assert session.chaser_spawn_remaining == 0.8
+
+
+def test_restart_allows_game_updates_again() -> None:
+    session = _create_session()
+    _trigger_game_over(session)
+    session.restart()
+
+    session.update(PlayerCommand(vertical_direction=1), elapsed_seconds=0.5)
+
+    assert session.player.y == 351.0
+
+
 def _create_session(random_seed: int = 1) -> GameSession:
     return GameSession.create(
         world_width=750,
@@ -443,3 +510,9 @@ def _create_chaser(x: float, y: float) -> Chaser:
         horizontal_speed=240.0,
         tracking_speed=180.0,
     )
+
+
+def _trigger_game_over(session: GameSession) -> None:
+    session.player.health = 1
+    session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.update(PlayerCommand(), elapsed_seconds=0.01)

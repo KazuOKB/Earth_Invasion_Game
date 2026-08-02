@@ -29,6 +29,7 @@ BACKGROUND_COLOR = (6, 10, 28)
 LETTERBOX_COLOR = (0, 0, 0)
 TITLE_COLOR = (255, 90, 30)
 TEXT_COLOR = (230, 235, 255)
+GAME_OVER_COLOR = (255, 70, 70)
 BEAM_COLOR = (100, 235, 255)
 GAUGE_COLOR = (255, 100, 40)
 GAUGE_BACKGROUND_COLOR = (45, 50, 70)
@@ -84,6 +85,12 @@ class PygameApplication:
 
                     if close_requested:
                         running = False
+                    elif (
+                        event.type == pygame.KEYDOWN
+                        and event.key == pygame.K_r
+                        and session.is_game_over
+                    ):
+                        session.restart()
                     elif event.type == pygame.VIDEORESIZE:
                         window = pygame.display.set_mode(event.size, pygame.RESIZABLE)
 
@@ -232,6 +239,9 @@ class PygameApplication:
         guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 475))
         surface.blit(guide, guide_rect)
 
+        if session.is_game_over:
+            self._draw_game_over(surface, title_font, text_font)
+
     def _draw_invasion_gauge(
         self,
         surface: pygame.Surface,
@@ -276,6 +286,24 @@ class PygameApplication:
 
         blink_count = int(session.player.invincibility_remaining / PLAYER_BLINK_INTERVAL_SECONDS)
         return blink_count % 2 == 0
+
+    def _draw_game_over(
+        self,
+        surface: pygame.Surface,
+        title_font: pygame.font.Font,
+        text_font: pygame.font.Font,
+    ) -> None:
+        overlay = pygame.Surface(self.logical_size, pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        title = title_font.render("GAME OVER", True, GAME_OVER_COLOR)
+        title_rect = title.get_rect(center=(self.logical_size[0] // 2, 220))
+        surface.blit(title, title_rect)
+
+        guide = text_font.render("R: Retry    Esc: Close", True, TEXT_COLOR)
+        guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 270))
+        surface.blit(guide, guide_rect)
 
     def _present(
         self,
