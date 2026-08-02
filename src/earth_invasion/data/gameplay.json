@@ -13,6 +13,11 @@
     "beam_cooldown_seconds": 0.25,
     "beam_speed_pixels_per_second": 600.0
   },
+  "meteor": {
+    "spawn_interval_seconds": 1.2,
+    "minimum_speed_pixels_per_second": 180.0,
+    "maximum_speed_pixels_per_second": 300.0
+  },
   "invasion_rewards": {
     "meteor": 2,
     "chaser": 5,

@@ -47,6 +47,15 @@ class WeaponConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class MeteorConfig:
+    """隕石の出現と移動の設定。"""
+
+    spawn_interval_seconds: float
+    minimum_speed_pixels_per_second: float
+    maximum_speed_pixels_per_second: float
+
+
+@dataclass(frozen=True, slots=True)
 class InvasionRewards:
     """敵を倒したときに増える侵略ゲージの量。"""
 
@@ -63,6 +72,7 @@ class GameplayConfig:
     updates_per_second: int
     player: PlayerConfig
     weapon: WeaponConfig
+    meteor: MeteorConfig
     invasion_rewards: InvasionRewards
 
 
@@ -117,7 +127,10 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     resolution = _required_object(data, "logical_resolution", "gameplay")
     player = _required_object(data, "player", "gameplay")
     weapon = _required_object(data, "weapon", "gameplay")
+    meteor = _required_object(data, "meteor", "gameplay")
     rewards = _required_object(data, "invasion_rewards", "gameplay")
+
+    meteor_config = _parse_meteor_config(meteor)
 
     return GameplayConfig(
         logical_resolution=LogicalResolution(
@@ -150,11 +163,38 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
                 "weapon",
             ),
         ),
+        meteor=meteor_config,
         invasion_rewards=InvasionRewards(
             meteor=_positive_int(rewards, "meteor", "invasion_rewards"),
             chaser=_positive_int(rewards, "chaser", "invasion_rewards"),
             shooter=_positive_int(rewards, "shooter", "invasion_rewards"),
         ),
+    )
+
+
+def _parse_meteor_config(data: JsonObject) -> MeteorConfig:
+    minimum_speed = _positive_number(
+        data,
+        "minimum_speed_pixels_per_second",
+        "meteor",
+    )
+    maximum_speed = _positive_number(
+        data,
+        "maximum_speed_pixels_per_second",
+        "meteor",
+    )
+
+    if minimum_speed > maximum_speed:
+        raise ConfigError("meteorの最低速度は最高速度以下にしてください")
+
+    return MeteorConfig(
+        spawn_interval_seconds=_positive_number(
+            data,
+            "spawn_interval_seconds",
+            "meteor",
+        ),
+        minimum_speed_pixels_per_second=minimum_speed,
+        maximum_speed_pixels_per_second=maximum_speed,
     )
 
 

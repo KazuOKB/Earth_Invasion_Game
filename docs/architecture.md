@@ -50,6 +50,7 @@ Earth_Invasion_Game/
 │       ├── __main__.py
 │       ├── configuration.py
 │       ├── assets/
+│       │   ├── meteo2.png
 │       │   └── ufo003.png
 │       ├── data/
 │       │   ├── gameplay.json
@@ -221,6 +222,8 @@ uv run earth-invasion --stage-profile test --check-config
 - プレイヤーの移動速度
 - ビームの発射間隔
 - ビームの移動速度
+- 隕石の出現間隔
+- 隕石の最低速度と最高速度
 - 敵を倒したときの侵略ゲージ増加量
 
 ## 11. 画面の拡大
@@ -312,6 +315,10 @@ random_source = random.Random(seed)
 - ビームが設定した発射間隔を守る
 - ビームが設定した速度で移動する
 - 画面外へ出たビームが削除される
+- 隕石が設定した間隔で出現する
+- 隕石の位置と速度を同じ乱数seedで再現できる
+- 隕石が固有の速度で左へ移動する
+- 画面外へ出た隕石が削除される
 - 時間で区間が進む
 - テスト設定では短時間でボスまで進む
 - 敵を倒すと侵略ゲージが増える
