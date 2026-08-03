@@ -3,6 +3,7 @@
 import pytest
 
 from earth_invasion.gameplay.settings import (
+    BossSettings,
     ChaserSettings,
     MeteorSettings,
     PlayerSettings,
@@ -52,4 +53,16 @@ def test_non_positive_shooter_shot_interval_is_rejected() -> None:
             horizontal_speed=120.0,
             shot_interval_seconds=0.0,
             projectile_speed=300.0,
+        )
+
+
+def test_non_positive_boss_health_is_rejected() -> None:
+    with pytest.raises(ValueError, match="boss.max_health"):
+        BossSettings(
+            width=173,
+            height=150,
+            max_health=0,
+            vertical_speed=100.0,
+            shot_interval_seconds=0.6,
+            projectile_speed=360.0,
         )

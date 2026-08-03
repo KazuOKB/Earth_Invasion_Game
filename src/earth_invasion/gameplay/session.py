@@ -12,6 +12,7 @@ from earth_invasion.gameplay.entities import (
     ENEMY_PROJECTILE_HEIGHT,
     ENEMY_PROJECTILE_WIDTH,
     Beam,
+    Boss,
     Chaser,
     EnemyProjectile,
     Meteor,
@@ -20,6 +21,7 @@ from earth_invasion.gameplay.entities import (
 )
 from earth_invasion.gameplay.geometry import rectangles_overlap
 from earth_invasion.gameplay.settings import (
+    BossSettings,
     ChaserSettings,
     InvasionSettings,
     MeteorSettings,
@@ -31,6 +33,7 @@ from earth_invasion.gameplay.stage import GamePhase, StageProgress, StageSchedul
 from earth_invasion.gameplay.status import GameStatus
 
 PLAYER_START_X = 100.0
+BOSS_RIGHT_MARGIN = 40.0
 TIME_EPSILON = 1e-9
 
 
@@ -45,6 +48,7 @@ class GameSession:
     meteor_settings: MeteorSettings
     chaser_settings: ChaserSettings
     shooter_settings: ShooterSettings
+    boss_settings: BossSettings
     invasion_settings: InvasionSettings
     stage: StageProgress
     random_source: random.Random
@@ -54,6 +58,7 @@ class GameSession:
     meteors: list[Meteor] = field(default_factory=list)
     chasers: list[Chaser] = field(default_factory=list)
     shooters: list[Shooter] = field(default_factory=list)
+    boss: Boss | None = None
     enemy_projectiles: list[EnemyProjectile] = field(default_factory=list)
     beam_cooldown_remaining: float = 0.0
     meteor_spawn_remaining: float = 0.0
@@ -72,6 +77,7 @@ class GameSession:
         meteor_settings: MeteorSettings,
         chaser_settings: ChaserSettings,
         shooter_settings: ShooterSettings,
+        boss_settings: BossSettings,
         invasion_settings: InvasionSettings,
         stage_schedule: StageSchedule,
         random_source: random.Random,
@@ -89,6 +95,8 @@ class GameSession:
             raise ValueError("追尾敵の大きさはゲーム画面以下にしてください")
         if shooter_settings.width > world_width or shooter_settings.height > world_height:
             raise ValueError("攻撃敵の大きさはゲーム画面以下にしてください")
+        if boss_settings.width > world_width or boss_settings.height > world_height:
+            raise ValueError("ボスの大きさはゲーム画面以下にしてください")
 
         player = _create_player(world_width, world_height, player_settings)
         return cls(
@@ -99,6 +107,7 @@ class GameSession:
             meteor_settings=meteor_settings,
             chaser_settings=chaser_settings,
             shooter_settings=shooter_settings,
+            boss_settings=boss_settings,
             invasion_settings=invasion_settings,
             stage=StageProgress(schedule=stage_schedule),
             random_source=random_source,
@@ -112,9 +121,10 @@ class GameSession:
         """プレイヤー、ビーム、敵を固定時間だけ更新する。"""
 
         _check_positive(elapsed_seconds, "elapsed_seconds")
-        if self.status is GameStatus.GAME_OVER:
+        if self.status is not GameStatus.PLAYING:
             return
 
+        self._start_boss_battle_if_needed()
         self.player.update_invincibility(elapsed_seconds)
         self._move_player(command, elapsed_seconds)
         self._move_beams(elapsed_seconds)
@@ -125,13 +135,23 @@ class GameSession:
         self._update_chaser_spawning(elapsed_seconds)
         self._move_shooters(elapsed_seconds)
         self._update_shooter_spawning(elapsed_seconds)
+        self._move_boss(elapsed_seconds)
         self._move_enemy_projectiles(elapsed_seconds)
         self._update_shooter_firing(elapsed_seconds)
+        self._update_boss_firing(elapsed_seconds)
         self._resolve_beam_meteor_collisions()
         self._resolve_beam_chaser_collisions()
         self._resolve_beam_shooter_collisions()
+        self._resolve_beam_boss_collisions()
+        if self.is_game_clear:
+            return
+
         self._resolve_player_damage_collisions()
+        if self.is_game_over:
+            return
+
         self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
+        self._start_boss_battle_if_needed()
 
     @property
     def current_phase(self) -> GamePhase:
@@ -157,6 +177,18 @@ class GameSession:
 
         return self.status is GameStatus.GAME_OVER
 
+    @property
+    def is_game_clear(self) -> bool:
+        """ゲームクリア状態か返す。"""
+
+        return self.status is GameStatus.GAME_CLEAR
+
+    @property
+    def is_finished(self) -> bool:
+        """ゲームオーバーまたはゲームクリアか返す。"""
+
+        return self.status is not GameStatus.PLAYING
+
     def restart(self) -> None:
         """すべてのゲーム状態を初期値へ戻す。"""
 
@@ -170,6 +202,7 @@ class GameSession:
         self.meteors = []
         self.chasers = []
         self.shooters = []
+        self.boss = None
         self.enemy_projectiles = []
         self.beam_cooldown_remaining = 0.0
         self.meteor_spawn_remaining = self.meteor_settings.spawn_interval_seconds
@@ -320,26 +353,78 @@ class GameSession:
     def _fire_enemy_projectile(self, shooter: Shooter) -> None:
         projectile_x = shooter.x - ENEMY_PROJECTILE_WIDTH
         projectile_y = shooter.y + (shooter.height - ENEMY_PROJECTILE_HEIGHT) / 2
-        shooter_center_x = shooter.x + shooter.width / 2
-        shooter_center_y = shooter.y + shooter.height / 2
+        self._fire_aimed_projectile(
+            x=projectile_x,
+            y=projectile_y,
+            speed=self.shooter_settings.projectile_speed,
+        )
+
+    def _start_boss_battle_if_needed(self) -> None:
+        if self.current_phase is not GamePhase.BOSS or self.boss is not None:
+            return
+
+        self.meteors = []
+        self.chasers = []
+        self.shooters = []
+        self.enemy_projectiles = []
+        maximum_x = self.world_width - self.boss_settings.width
+        boss_x = max(float(maximum_x) - BOSS_RIGHT_MARGIN, 0.0)
+        boss_y = (self.world_height - self.boss_settings.height) / 2
+        self.boss = Boss(
+            x=boss_x,
+            y=boss_y,
+            width=self.boss_settings.width,
+            height=self.boss_settings.height,
+            health=self.boss_settings.max_health,
+            vertical_speed=self.boss_settings.vertical_speed,
+            vertical_direction=1,
+            shot_cooldown_remaining=self.boss_settings.shot_interval_seconds,
+        )
+
+    def _move_boss(self, elapsed_seconds: float) -> None:
+        if self.boss is None:
+            return
+
+        self.boss.move(elapsed_seconds, self.world_height)
+
+    def _update_boss_firing(self, elapsed_seconds: float) -> None:
+        if self.current_phase is not GamePhase.BOSS or self.boss is None:
+            return
+
+        self.boss.update_shot_cooldown(elapsed_seconds)
+        if self.boss.shot_cooldown_remaining > TIME_EPSILON:
+            return
+
+        projectile_x = self.boss.x - ENEMY_PROJECTILE_WIDTH
+        projectile_y = self.boss.y + (self.boss.height - ENEMY_PROJECTILE_HEIGHT) / 2
+        self._fire_aimed_projectile(
+            x=projectile_x,
+            y=projectile_y,
+            speed=self.boss_settings.projectile_speed,
+        )
+        self.boss.shot_cooldown_remaining = self.boss_settings.shot_interval_seconds
+
+    def _fire_aimed_projectile(self, *, x: float, y: float, speed: float) -> None:
+        projectile_center_x = x + ENEMY_PROJECTILE_WIDTH / 2
+        projectile_center_y = y + ENEMY_PROJECTILE_HEIGHT / 2
         player_center_x = self.player.x + self.player.width / 2
         player_center_y = self.player.y + self.player.height / 2
-        distance_x = player_center_x - shooter_center_x
-        distance_y = player_center_y - shooter_center_y
+        distance_x = player_center_x - projectile_center_x
+        distance_y = player_center_y - projectile_center_y
         distance = math.hypot(distance_x, distance_y)
 
         if distance <= TIME_EPSILON:
-            velocity_x = -self.shooter_settings.projectile_speed
+            velocity_x = -speed
             velocity_y = 0.0
         else:
-            speed_ratio = self.shooter_settings.projectile_speed / distance
+            speed_ratio = speed / distance
             velocity_x = distance_x * speed_ratio
             velocity_y = distance_y * speed_ratio
 
         self.enemy_projectiles.append(
             EnemyProjectile(
-                x=projectile_x,
-                y=projectile_y,
+                x=x,
+                y=y,
                 velocity_x=velocity_x,
                 velocity_y=velocity_y,
             )
@@ -441,6 +526,25 @@ class GameSession:
 
         gained_points = destroyed_shooter_count * self.invasion_settings.shooter_reward
         self._increase_invasion_gauge(gained_points)
+
+    def _resolve_beam_boss_collisions(self) -> None:
+        if self.boss is None:
+            return
+
+        remaining_beams: list[Beam] = []
+        hit_count = 0
+
+        for beam in self.beams:
+            if rectangles_overlap(beam, self.boss):
+                hit_count += 1
+            else:
+                remaining_beams.append(beam)
+
+        self.beams = remaining_beams
+        self.boss.take_damage(hit_count)
+
+        if self.boss.is_defeated:
+            self.status = GameStatus.GAME_CLEAR
 
     def _increase_invasion_gauge(self, points: int) -> None:
         self.invasion_gauge = min(

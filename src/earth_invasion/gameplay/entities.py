@@ -154,8 +154,54 @@ class Shooter:
 
 
 @dataclass(slots=True)
+class Boss:
+    """上下へ移動しながら弾を撃つ地球防衛ボス。"""
+
+    x: float
+    y: float
+    width: int
+    height: int
+    health: int
+    vertical_speed: float
+    vertical_direction: int
+    shot_cooldown_remaining: float
+
+    @property
+    def is_defeated(self) -> bool:
+        """体力がなくなっているか返す。"""
+
+        return self.health <= 0
+
+    def move(self, elapsed_seconds: float, world_height: int) -> None:
+        """画面の上下端で向きを変えながら移動する。"""
+
+        self.y += self.vertical_direction * self.vertical_speed * elapsed_seconds
+        maximum_y = float(world_height - self.height)
+
+        if self.y <= 0.0:
+            self.y = 0.0
+            self.vertical_direction = 1
+        elif self.y >= maximum_y:
+            self.y = maximum_y
+            self.vertical_direction = -1
+
+    def update_shot_cooldown(self, elapsed_seconds: float) -> None:
+        """次に射撃できるまでの時間を減らす。"""
+
+        self.shot_cooldown_remaining = max(
+            self.shot_cooldown_remaining - elapsed_seconds,
+            0.0,
+        )
+
+    def take_damage(self, damage: int) -> None:
+        """体力を0未満にせず減らす。"""
+
+        self.health = max(self.health - damage, 0)
+
+
+@dataclass(slots=True)
 class EnemyProjectile:
-    """攻撃敵が発射する弾。"""
+    """攻撃敵またはボスが発射する弾。"""
 
     x: float
     y: float

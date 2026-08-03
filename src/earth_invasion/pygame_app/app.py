@@ -9,6 +9,7 @@ import pygame
 from earth_invasion.configuration import ApplicationConfig
 from earth_invasion.gameplay.session import GameSession
 from earth_invasion.gameplay.settings import (
+    BossSettings,
     ChaserSettings,
     InvasionSettings,
     MeteorSettings,
@@ -18,6 +19,7 @@ from earth_invasion.gameplay.settings import (
 )
 from earth_invasion.gameplay.stage import StageSchedule
 from earth_invasion.pygame_app.assets import (
+    load_boss_image,
     load_chaser_image,
     load_meteor_image,
     load_player_image,
@@ -32,12 +34,15 @@ LETTERBOX_COLOR = (0, 0, 0)
 TITLE_COLOR = (255, 90, 30)
 TEXT_COLOR = (230, 235, 255)
 GAME_OVER_COLOR = (255, 70, 70)
+GAME_CLEAR_COLOR = (100, 255, 160)
 BEAM_COLOR = (100, 235, 255)
 ENEMY_PROJECTILE_COLOR = (255, 80, 80)
 GAUGE_COLOR = (255, 100, 40)
 GAUGE_BACKGROUND_COLOR = (45, 50, 70)
 GAUGE_WIDTH = 250
 GAUGE_HEIGHT = 14
+BOSS_HEALTH_WIDTH = 220
+BOSS_HEALTH_HEIGHT = 12
 PLAYER_BLINK_INTERVAL_SECONDS = 0.1
 
 
@@ -66,11 +71,13 @@ class PygameApplication:
             meteor_image = load_meteor_image()
             chaser_image = load_chaser_image()
             shooter_image = load_shooter_image()
+            boss_image = load_boss_image()
             session = self._create_session(
                 player_image.get_size(),
                 meteor_image.get_size(),
                 chaser_image.get_size(),
                 shooter_image.get_size(),
+                boss_image.get_size(),
             )
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
             title_font = pygame.font.Font(None, 48)
@@ -93,7 +100,7 @@ class PygameApplication:
                     elif (
                         event.type == pygame.KEYDOWN
                         and event.key == pygame.K_r
-                        and session.is_game_over
+                        and session.is_finished
                     ):
                         session.restart()
                     elif event.type == pygame.VIDEORESIZE:
@@ -122,6 +129,7 @@ class PygameApplication:
                     meteor_image,
                     chaser_image,
                     shooter_image,
+                    boss_image,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -140,16 +148,19 @@ class PygameApplication:
         meteor_size: Size,
         chaser_size: Size,
         shooter_size: Size,
+        boss_size: Size,
     ) -> GameSession:
         player_width, player_height = player_size
         meteor_width, meteor_height = meteor_size
         chaser_width, chaser_height = chaser_size
         shooter_width, shooter_height = shooter_size
+        boss_width, boss_height = boss_size
         player_config = self.config.gameplay.player
         weapon_config = self.config.gameplay.weapon
         meteor_config = self.config.gameplay.meteor
         chaser_config = self.config.gameplay.chaser
         shooter_config = self.config.gameplay.shooter
+        boss_config = self.config.gameplay.boss
         invasion_rewards = self.config.gameplay.invasion_rewards
         stage_config = self.config.stage
         return GameSession.create(
@@ -188,6 +199,14 @@ class PygameApplication:
                 shot_interval_seconds=shooter_config.shot_interval_seconds,
                 projectile_speed=shooter_config.projectile_speed_pixels_per_second,
             ),
+            boss_settings=BossSettings(
+                width=boss_width,
+                height=boss_height,
+                max_health=boss_config.max_health,
+                vertical_speed=boss_config.vertical_speed_pixels_per_second,
+                shot_interval_seconds=boss_config.shot_interval_seconds,
+                projectile_speed=boss_config.projectile_speed_pixels_per_second,
+            ),
             invasion_settings=InvasionSettings(
                 target=stage_config.invasion_target,
                 meteor_reward=invasion_rewards.meteor,
@@ -212,6 +231,7 @@ class PygameApplication:
         meteor_image: pygame.Surface,
         chaser_image: pygame.Surface,
         shooter_image: pygame.Surface,
+        boss_image: pygame.Surface,
     ) -> None:
         surface.fill(BACKGROUND_COLOR)
 
@@ -245,6 +265,11 @@ class PygameApplication:
             shooter_position = round(shooter.x), round(shooter.y)
             surface.blit(shooter_image, shooter_position)
 
+        if session.boss is not None:
+            boss_position = round(session.boss.x), round(session.boss.y)
+            surface.blit(boss_image, boss_position)
+            self._draw_boss_health(surface, text_font, session)
+
         if self._player_is_visible(session):
             player_position = round(session.player.x), round(session.player.y)
             surface.blit(player_image, player_position)
@@ -273,6 +298,8 @@ class PygameApplication:
 
         if session.is_game_over:
             self._draw_game_over(surface, title_font, text_font)
+        elif session.is_game_clear:
+            self._draw_game_clear(surface, title_font, text_font)
 
     def _draw_invasion_gauge(
         self,
@@ -312,6 +339,37 @@ class PygameApplication:
         )
         surface.blit(health, (20, 105))
 
+    def _draw_boss_health(
+        self,
+        surface: pygame.Surface,
+        text_font: pygame.font.Font,
+        session: GameSession,
+    ) -> None:
+        if session.boss is None:
+            return
+
+        gauge_x = (self.logical_size[0] - BOSS_HEALTH_WIDTH) // 2
+        gauge_y = 425
+        health_ratio = session.boss.health / session.boss_settings.max_health
+        filled_width = round(BOSS_HEALTH_WIDTH * health_ratio)
+        background = pygame.Rect(
+            gauge_x,
+            gauge_y,
+            BOSS_HEALTH_WIDTH,
+            BOSS_HEALTH_HEIGHT,
+        )
+        filled = pygame.Rect(gauge_x, gauge_y, filled_width, BOSS_HEALTH_HEIGHT)
+        pygame.draw.rect(surface, GAUGE_BACKGROUND_COLOR, background)
+        pygame.draw.rect(surface, GAME_OVER_COLOR, filled)
+
+        label = text_font.render(
+            f"Boss: {session.boss.health} / {session.boss_settings.max_health}",
+            True,
+            TEXT_COLOR,
+        )
+        label_rect = label.get_rect(center=(self.logical_size[0] // 2, 410))
+        surface.blit(label, label_rect)
+
     def _player_is_visible(self, session: GameSession) -> bool:
         if not session.player.is_invincible:
             return True
@@ -330,6 +388,24 @@ class PygameApplication:
         surface.blit(overlay, (0, 0))
 
         title = title_font.render("GAME OVER", True, GAME_OVER_COLOR)
+        title_rect = title.get_rect(center=(self.logical_size[0] // 2, 220))
+        surface.blit(title, title_rect)
+
+        guide = text_font.render("R: Retry    Esc: Close", True, TEXT_COLOR)
+        guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 270))
+        surface.blit(guide, guide_rect)
+
+    def _draw_game_clear(
+        self,
+        surface: pygame.Surface,
+        title_font: pygame.font.Font,
+        text_font: pygame.font.Font,
+    ) -> None:
+        overlay = pygame.Surface(self.logical_size, pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        title = title_font.render("MISSION COMPLETE", True, GAME_CLEAR_COLOR)
         title_rect = title.get_rect(center=(self.logical_size[0] // 2, 220))
         surface.blit(title, title_rect)
 

@@ -29,6 +29,12 @@
     "shot_interval_seconds": 0.8,
     "projectile_speed_pixels_per_second": 300.0
   },
+  "boss": {
+    "max_health": 20,
+    "vertical_speed_pixels_per_second": 100.0,
+    "shot_interval_seconds": 0.6,
+    "projectile_speed_pixels_per_second": 360.0
+  },
   "invasion_rewards": {
     "meteor": 2,
     "chaser": 5,
