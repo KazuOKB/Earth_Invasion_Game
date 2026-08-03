@@ -41,6 +41,12 @@ def load_boss_image() -> pygame.Surface:
     return _load_image("boss.png")
 
 
+def load_background_image(size: tuple[int, int]) -> pygame.Surface:
+    """宇宙背景を内部画面の大きさで読み込む。"""
+
+    return pygame.transform.smoothscale(_load_image("background.png"), size)
+
+
 def _load_image(filename: str) -> pygame.Surface:
     resource = files(ASSET_PACKAGE).joinpath(filename)
     image_data = BytesIO(resource.read_bytes())

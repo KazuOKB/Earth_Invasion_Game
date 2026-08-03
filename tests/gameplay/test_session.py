@@ -30,6 +30,21 @@ def test_player_starts_on_left_and_vertical_center() -> None:
     assert session.player.health == 3
 
 
+def test_player_starts_below_hud_and_stops_at_playfield_top() -> None:
+    session = _create_session(playfield_top=100)
+
+    assert session.player.y == 281.0
+
+    session.update(PlayerCommand(vertical_direction=-1), elapsed_seconds=10.0)
+
+    assert session.player.y == 100.0
+
+
+def test_invalid_playfield_top_is_rejected() -> None:
+    with pytest.raises(ValueError, match="playfield_top"):
+        _create_session(playfield_top=500)
+
+
 def test_player_moves_at_configured_speed() -> None:
     session = _create_session()
 
@@ -337,6 +352,22 @@ def test_shooter_spawns_inside_vertical_range() -> None:
     assert 0.0 <= shooter.y <= 460.0
 
 
+def test_enemies_spawn_below_hud() -> None:
+    meteor_session = _create_session(playfield_top=100)
+    chaser_session = _create_session(playfield_top=100)
+    shooter_session = _create_session(playfield_top=100)
+    chaser_session.stage.update(elapsed_seconds=30.0, invasion_gauge_is_full=False)
+    shooter_session.stage.update(elapsed_seconds=75.0, invasion_gauge_is_full=False)
+
+    meteor_session.update(PlayerCommand(), elapsed_seconds=1.2)
+    chaser_session.update(PlayerCommand(), elapsed_seconds=0.8)
+    shooter_session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    assert meteor_session.meteors[0].y >= 100.0
+    assert chaser_session.chasers[0].y >= 100.0
+    assert shooter_session.shooters[0].y >= 100.0
+
+
 def test_shooter_randomness_is_repeatable_with_same_seed() -> None:
     first_session = _create_session(random_seed=10)
     second_session = _create_session(random_seed=10)
@@ -395,6 +426,22 @@ def test_enemy_projectile_moves_and_is_removed_outside_screen() -> None:
     assert projectile.x == 350.0
 
     projectile.x = -float(projectile.width)
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.enemy_projectiles == []
+
+
+def test_enemy_projectile_is_removed_after_entering_hud() -> None:
+    session = _create_session(playfield_top=100)
+    session.enemy_projectiles.append(
+        EnemyProjectile(
+            x=500.0,
+            y=99.0,
+            velocity_x=0.0,
+            velocity_y=0.0,
+        )
+    )
+
     session.update(PlayerCommand(), elapsed_seconds=0.01)
 
     assert session.enemy_projectiles == []
@@ -493,6 +540,21 @@ def test_boss_moves_vertically_and_turns_at_screen_edge() -> None:
 
     assert session.boss.y == 350.0
     assert session.boss.vertical_direction == -1
+
+
+def test_boss_starts_and_turns_below_hud() -> None:
+    session = _create_session(playfield_top=100)
+    _enter_boss_phase(session)
+    assert session.boss is not None
+
+    assert session.boss.y == 225.0
+
+    session.boss.y = 100.0
+    session.boss.vertical_direction = -1
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.boss.y == 100.0
+    assert session.boss.vertical_direction == 1
 
 
 def test_boss_fires_toward_player_after_configured_interval() -> None:
@@ -738,10 +800,11 @@ def test_restart_allows_game_updates_again() -> None:
     assert session.player.y == 351.0
 
 
-def _create_session(random_seed: int = 1) -> GameSession:
+def _create_session(random_seed: int = 1, playfield_top: int = 0) -> GameSession:
     return GameSession.create(
         world_width=750,
         world_height=500,
+        playfield_top=playfield_top,
         player_settings=PlayerSettings(
             width=57,
             height=38,
