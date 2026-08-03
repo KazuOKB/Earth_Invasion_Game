@@ -522,6 +522,23 @@ def test_beam_damages_boss_and_is_removed() -> None:
     assert session.boss.health == 19
 
 
+def test_each_overlapping_beam_damages_boss() -> None:
+    session = _create_session()
+    _enter_boss_phase(session)
+    session.beams.extend(
+        [
+            Beam(x=540.0, y=200.0),
+            Beam(x=545.0, y=210.0),
+        ]
+    )
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.beams == []
+    assert session.boss is not None
+    assert session.boss.health == 18
+
+
 def test_defeating_boss_changes_status_to_game_clear() -> None:
     session = _create_session()
     _enter_boss_phase(session)

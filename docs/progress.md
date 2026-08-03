@@ -124,7 +124,7 @@ uv run earth-invasion --stage-profile test
 
 ## 8. 品質確認
 
-現在の自動テストは104件です。
+現在の自動テストは105件です。
 
 ローカルでは次を実行します。
 

@@ -124,7 +124,7 @@ class GameSession:
         if self.status is not GameStatus.PLAYING:
             return
 
-        self._ensure_boss_exists()
+        self._start_boss_battle_if_needed()
         self.player.update_invincibility(elapsed_seconds)
         self._move_player(command, elapsed_seconds)
         self._move_beams(elapsed_seconds)
@@ -151,7 +151,7 @@ class GameSession:
             return
 
         self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
-        self._ensure_boss_exists()
+        self._start_boss_battle_if_needed()
 
     @property
     def current_phase(self) -> GamePhase:
@@ -359,7 +359,7 @@ class GameSession:
             speed=self.shooter_settings.projectile_speed,
         )
 
-    def _ensure_boss_exists(self) -> None:
+    def _start_boss_battle_if_needed(self) -> None:
         if self.current_phase is not GamePhase.BOSS or self.boss is not None:
             return
 

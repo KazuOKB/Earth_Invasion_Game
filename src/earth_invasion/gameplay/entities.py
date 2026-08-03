@@ -201,7 +201,7 @@ class Boss:
 
 @dataclass(slots=True)
 class EnemyProjectile:
-    """攻撃敵が発射する弾。"""
+    """攻撃敵またはボスが発射する弾。"""
 
     x: float
     y: float
