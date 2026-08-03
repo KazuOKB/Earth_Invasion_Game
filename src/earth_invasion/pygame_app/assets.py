@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from importlib.resources import files
 from io import BytesIO
 
@@ -9,6 +10,31 @@ import pygame
 
 ASSET_PACKAGE = "earth_invasion.assets"
 SHOOTER_IMAGE_SIZE = (60, 40)
+
+
+@dataclass(frozen=True, slots=True)
+class GameImages:
+    """1回の起動で使う画像をまとめる。"""
+
+    background: pygame.Surface
+    player: pygame.Surface
+    meteor: pygame.Surface
+    chaser: pygame.Surface
+    shooter: pygame.Surface
+    boss: pygame.Surface
+
+
+def load_game_images(size: tuple[int, int]) -> GameImages:
+    """ゲームで使う画像をすべて読み込む。"""
+
+    return GameImages(
+        background=load_background_image(size),
+        player=load_player_image(),
+        meteor=load_meteor_image(),
+        chaser=load_chaser_image(),
+        shooter=load_shooter_image(),
+        boss=load_boss_image(),
+    )
 
 
 def load_player_image() -> pygame.Surface:

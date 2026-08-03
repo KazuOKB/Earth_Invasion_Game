@@ -18,29 +18,33 @@ from earth_invasion.gameplay.settings import (
     WeaponSettings,
 )
 from earth_invasion.gameplay.stage import StageSchedule
-from earth_invasion.pygame_app.assets import (
-    load_background_image,
-    load_boss_image,
-    load_chaser_image,
-    load_meteor_image,
-    load_player_image,
-    load_shooter_image,
-)
+from earth_invasion.pygame_app.assets import GameImages, load_game_images
 from earth_invasion.pygame_app.display import Size, calculate_viewport
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
 from earth_invasion.pygame_app.hud import HUD_HEIGHT, heart_states
 from earth_invasion.pygame_app.input import create_player_command
+from earth_invasion.pygame_app.navigation import (
+    AppScreen,
+    NavigationAction,
+    NavigationKey,
+    ScreenFlow,
+    action_for_key,
+)
+from earth_invasion.pygame_app.screens import (
+    draw_result_screen,
+    draw_rules_screen,
+    draw_title_screen,
+)
 
 LETTERBOX_COLOR = (0, 0, 0)
 TEXT_COLOR = (230, 235, 255)
 HUD_COLOR = (6, 10, 28)
 HUD_BORDER_COLOR = (80, 100, 145)
-GAME_OVER_COLOR = (255, 70, 70)
-GAME_CLEAR_COLOR = (100, 255, 160)
 BEAM_COLOR = (100, 235, 255)
 ENEMY_PROJECTILE_COLOR = (255, 80, 80)
 GAUGE_COLOR = (255, 100, 40)
 GAUGE_BACKGROUND_COLOR = (45, 50, 70)
+BOSS_HEALTH_COLOR = (255, 70, 70)
 GAUGE_WIDTH = 250
 GAUGE_HEIGHT = 14
 BOSS_HEALTH_WIDTH = 220
@@ -73,20 +77,11 @@ class PygameApplication:
             window = pygame.display.set_mode(self.logical_size, pygame.RESIZABLE)
             pygame.display.set_caption("Earth Invasion Game")
             logical_surface = pygame.Surface(self.logical_size)
-            background_image = load_background_image(self.logical_size)
-            player_image = load_player_image()
-            meteor_image = load_meteor_image()
-            chaser_image = load_chaser_image()
-            shooter_image = load_shooter_image()
-            boss_image = load_boss_image()
-            session = self._create_session(
-                player_image.get_size(),
-                meteor_image.get_size(),
-                chaser_image.get_size(),
-                shooter_image.get_size(),
-                boss_image.get_size(),
-            )
+            images = load_game_images(self.logical_size)
+            session = self._create_session(images)
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
+            screen_flow = ScreenFlow()
+            menu_title_font = pygame.font.Font(None, 72)
             title_font = pygame.font.Font(None, 48)
             text_font = pygame.font.Font(None, 30)
             clock = pygame.time.Clock()
@@ -98,46 +93,34 @@ class PygameApplication:
                 elapsed_seconds = clock.tick(self.config.gameplay.updates_per_second) / 1000.0
 
                 for event in pygame.event.get():
-                    close_requested = event.type == pygame.QUIT or (
-                        event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
-                    )
-
-                    if close_requested:
+                    if event.type == pygame.QUIT:
                         running = False
-                    elif (
-                        event.type == pygame.KEYDOWN
-                        and event.key == pygame.K_r
-                        and session.is_finished
-                    ):
-                        session.restart()
                     elif event.type == pygame.VIDEORESIZE:
                         window = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+                    elif event.type == pygame.KEYDOWN:
+                        action = action_for_key(
+                            screen_flow.current,
+                            _navigation_key(event.key),
+                        )
+                        running = running and self._apply_navigation_action(
+                            action, screen_flow, session, fixed_time_step
+                        )
 
                 if not running:
                     break
 
-                keys = pygame.key.get_pressed()
-                command = create_player_command(
-                    up_pressed=keys[pygame.K_UP],
-                    down_pressed=keys[pygame.K_DOWN],
-                    fire_pressed=keys[pygame.K_z],
-                )
-                update_count = fixed_time_step.consume(elapsed_seconds)
+                if screen_flow.current is AppScreen.GAMEPLAY:
+                    self._update_gameplay(session, fixed_time_step, elapsed_seconds)
+                    self._show_gameplay_result(screen_flow, session)
 
-                for _ in range(update_count):
-                    session.update(command, fixed_time_step.step_seconds)
-
-                self._draw_gameplay_preview(
+                self._draw_current_screen(
                     logical_surface,
+                    menu_title_font,
                     title_font,
                     text_font,
+                    screen_flow,
                     session,
-                    background_image,
-                    player_image,
-                    meteor_image,
-                    chaser_image,
-                    shooter_image,
-                    boss_image,
+                    images,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -150,19 +133,102 @@ class PygameApplication:
         finally:
             pygame.quit()
 
+    def _apply_navigation_action(
+        self,
+        action: NavigationAction,
+        screen_flow: ScreenFlow,
+        session: GameSession,
+        fixed_time_step: FixedTimeStep,
+    ) -> bool:
+        if action is NavigationAction.CLOSE:
+            return False
+
+        if action in (NavigationAction.START_GAME, NavigationAction.RETRY):
+            session.restart()
+
+        if action is not NavigationAction.NONE:
+            fixed_time_step.reset()
+            screen_flow.apply(action)
+
+        return True
+
+    def _update_gameplay(
+        self,
+        session: GameSession,
+        fixed_time_step: FixedTimeStep,
+        elapsed_seconds: float,
+    ) -> None:
+        keys = pygame.key.get_pressed()
+        command = create_player_command(
+            up_pressed=keys[pygame.K_UP],
+            down_pressed=keys[pygame.K_DOWN],
+            fire_pressed=keys[pygame.K_z],
+        )
+        update_count = fixed_time_step.consume(elapsed_seconds)
+
+        for _ in range(update_count):
+            session.update(command, fixed_time_step.step_seconds)
+
+    def _show_gameplay_result(
+        self,
+        screen_flow: ScreenFlow,
+        session: GameSession,
+    ) -> None:
+        if session.is_game_over:
+            screen_flow.show_game_over()
+        elif session.is_game_clear:
+            screen_flow.show_game_clear()
+
+    def _draw_current_screen(
+        self,
+        surface: pygame.Surface,
+        menu_title_font: pygame.font.Font,
+        title_font: pygame.font.Font,
+        text_font: pygame.font.Font,
+        screen_flow: ScreenFlow,
+        session: GameSession,
+        images: GameImages,
+    ) -> None:
+        match screen_flow.current:
+            case AppScreen.TITLE:
+                draw_title_screen(
+                    surface,
+                    images.background,
+                    menu_title_font,
+                    text_font,
+                )
+            case AppScreen.RULES:
+                draw_rules_screen(
+                    surface,
+                    images.background,
+                    title_font,
+                    text_font,
+                )
+            case AppScreen.GAMEPLAY:
+                self._draw_gameplay_preview(
+                    surface,
+                    text_font,
+                    session,
+                    images,
+                )
+            case AppScreen.GAME_OVER | AppScreen.GAME_CLEAR:
+                draw_result_screen(
+                    surface,
+                    images.background,
+                    title_font,
+                    text_font,
+                    screen_flow.current,
+                )
+
     def _create_session(
         self,
-        player_size: Size,
-        meteor_size: Size,
-        chaser_size: Size,
-        shooter_size: Size,
-        boss_size: Size,
+        images: GameImages,
     ) -> GameSession:
-        player_width, player_height = player_size
-        meteor_width, meteor_height = meteor_size
-        chaser_width, chaser_height = chaser_size
-        shooter_width, shooter_height = shooter_size
-        boss_width, boss_height = boss_size
+        player_width, player_height = images.player.get_size()
+        meteor_width, meteor_height = images.meteor.get_size()
+        chaser_width, chaser_height = images.chaser.get_size()
+        shooter_width, shooter_height = images.shooter.get_size()
+        boss_width, boss_height = images.boss.get_size()
         player_config = self.config.gameplay.player
         weapon_config = self.config.gameplay.weapon
         meteor_config = self.config.gameplay.meteor
@@ -233,37 +299,31 @@ class PygameApplication:
     def _draw_gameplay_preview(
         self,
         surface: pygame.Surface,
-        title_font: pygame.font.Font,
         text_font: pygame.font.Font,
         session: GameSession,
-        background_image: pygame.Surface,
-        player_image: pygame.Surface,
-        meteor_image: pygame.Surface,
-        chaser_image: pygame.Surface,
-        shooter_image: pygame.Surface,
-        boss_image: pygame.Surface,
+        images: GameImages,
     ) -> None:
-        surface.blit(background_image, (0, 0))
+        surface.blit(images.background, (0, 0))
 
         for meteor in session.meteors:
             meteor_position = round(meteor.x), round(meteor.y)
-            surface.blit(meteor_image, meteor_position)
+            surface.blit(images.meteor, meteor_position)
 
         for chaser in session.chasers:
             chaser_position = round(chaser.x), round(chaser.y)
-            surface.blit(chaser_image, chaser_position)
+            surface.blit(images.chaser, chaser_position)
 
         for shooter in session.shooters:
             shooter_position = round(shooter.x), round(shooter.y)
-            surface.blit(shooter_image, shooter_position)
+            surface.blit(images.shooter, shooter_position)
 
         if session.boss is not None:
             boss_position = round(session.boss.x), round(session.boss.y)
-            surface.blit(boss_image, boss_position)
+            surface.blit(images.boss, boss_position)
 
         if self._player_is_visible(session):
             player_position = round(session.player.x), round(session.player.y)
-            surface.blit(player_image, player_position)
+            surface.blit(images.player, player_position)
 
         for beam in session.beams:
             beam_rectangle = pygame.Rect(
@@ -284,11 +344,6 @@ class PygameApplication:
             pygame.draw.rect(surface, ENEMY_PROJECTILE_COLOR, projectile_rectangle)
 
         self._draw_hud(surface, text_font, session)
-
-        if session.is_game_over:
-            self._draw_game_over(surface, title_font, text_font)
-        elif session.is_game_clear:
-            self._draw_game_clear(surface, title_font, text_font)
 
     def _draw_hud(
         self,
@@ -408,7 +463,7 @@ class PygameApplication:
         )
         filled = pygame.Rect(gauge_x, gauge_y, filled_width, BOSS_HEALTH_HEIGHT)
         pygame.draw.rect(surface, GAUGE_BACKGROUND_COLOR, background)
-        pygame.draw.rect(surface, GAME_OVER_COLOR, filled)
+        pygame.draw.rect(surface, BOSS_HEALTH_COLOR, filled)
 
         label = text_font.render(
             f"Boss: {session.boss.health} / {session.boss_settings.max_health}",
@@ -425,42 +480,6 @@ class PygameApplication:
         blink_count = int(session.player.invincibility_remaining / PLAYER_BLINK_INTERVAL_SECONDS)
         return blink_count % 2 == 0
 
-    def _draw_game_over(
-        self,
-        surface: pygame.Surface,
-        title_font: pygame.font.Font,
-        text_font: pygame.font.Font,
-    ) -> None:
-        overlay = pygame.Surface(self.logical_size, pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        title = title_font.render("GAME OVER", True, GAME_OVER_COLOR)
-        title_rect = title.get_rect(center=(self.logical_size[0] // 2, 220))
-        surface.blit(title, title_rect)
-
-        guide = text_font.render("R: Retry    Esc: Close", True, TEXT_COLOR)
-        guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 270))
-        surface.blit(guide, guide_rect)
-
-    def _draw_game_clear(
-        self,
-        surface: pygame.Surface,
-        title_font: pygame.font.Font,
-        text_font: pygame.font.Font,
-    ) -> None:
-        overlay = pygame.Surface(self.logical_size, pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        title = title_font.render("MISSION COMPLETE", True, GAME_CLEAR_COLOR)
-        title_rect = title.get_rect(center=(self.logical_size[0] // 2, 220))
-        surface.blit(title, title_rect)
-
-        guide = text_font.render("R: Retry    Esc: Close", True, TEXT_COLOR)
-        guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 270))
-        surface.blit(guide, guide_rect)
-
     def _present(
         self,
         window: pygame.Surface,
@@ -470,3 +489,13 @@ class PygameApplication:
         viewport = calculate_viewport(self.logical_size, window.get_size())
         scaled_surface = pygame.transform.smoothscale(logical_surface, viewport.size)
         window.blit(scaled_surface, (viewport.x, viewport.y))
+
+
+def _navigation_key(key: int) -> NavigationKey:
+    if key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+        return NavigationKey.ENTER
+    if key == pygame.K_r:
+        return NavigationKey.R
+    if key == pygame.K_ESCAPE:
+        return NavigationKey.ESCAPE
+    return NavigationKey.OTHER
