@@ -37,3 +37,12 @@ def test_negative_elapsed_time_is_rejected() -> None:
 
     with pytest.raises(ValueError, match="elapsed_seconds"):
         fixed_time_step.consume(-0.1)
+
+
+def test_reset_discards_remaining_time() -> None:
+    fixed_time_step = FixedTimeStep(updates_per_second=60)
+    fixed_time_step.consume(1 / 120)
+
+    fixed_time_step.reset()
+
+    assert fixed_time_step.accumulated_seconds == 0.0

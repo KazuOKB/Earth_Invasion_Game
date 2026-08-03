@@ -41,3 +41,8 @@ class FixedTimeStep:
             update_count += 1
 
         return update_count
+
+    def reset(self) -> None:
+        """画面切り替え前に残っていた時間を破棄する。"""
+
+        self.accumulated_seconds = 0.0
