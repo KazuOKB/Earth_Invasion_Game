@@ -38,13 +38,14 @@ class Player:
         direction: int,
         speed: float,
         elapsed_seconds: float,
+        world_top: int,
         world_height: int,
     ) -> None:
         """上下へ移動し、画面の中で止まる。"""
 
         movement = direction * speed * elapsed_seconds
         maximum_y = world_height - self.height
-        self.y = min(max(self.y + movement, 0.0), float(maximum_y))
+        self.y = min(max(self.y + movement, float(world_top)), float(maximum_y))
 
     def update_invincibility(self, elapsed_seconds: float) -> None:
         """無敵時間を減らす。"""
@@ -111,6 +112,7 @@ class Chaser:
         self,
         elapsed_seconds: float,
         target_center_y: float,
+        world_top: int,
         world_height: int,
     ) -> None:
         """左へ進み、上下は目標の中心へ近づく。"""
@@ -125,7 +127,7 @@ class Chaser:
             maximum_tracking_distance,
         )
         maximum_y = world_height - self.height
-        self.y = min(max(self.y + tracking_distance, 0.0), float(maximum_y))
+        self.y = min(max(self.y + tracking_distance, float(world_top)), float(maximum_y))
 
 
 @dataclass(slots=True)
@@ -172,14 +174,14 @@ class Boss:
 
         return self.health <= 0
 
-    def move(self, elapsed_seconds: float, world_height: int) -> None:
+    def move(self, elapsed_seconds: float, world_top: int, world_height: int) -> None:
         """画面の上下端で向きを変えながら移動する。"""
 
         self.y += self.vertical_direction * self.vertical_speed * elapsed_seconds
         maximum_y = float(world_height - self.height)
 
-        if self.y <= 0.0:
-            self.y = 0.0
+        if self.y <= world_top:
+            self.y = float(world_top)
             self.vertical_direction = 1
         elif self.y >= maximum_y:
             self.y = maximum_y

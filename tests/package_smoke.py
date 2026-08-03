@@ -20,5 +20,6 @@ assert files("earth_invasion.assets").joinpath("meteo2.png").read_bytes().starts
 assert files("earth_invasion.assets").joinpath("chaser.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("shooter.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("boss.png").read_bytes().startswith(b"\x89PNG")
+assert files("earth_invasion.assets").joinpath("background.png").read_bytes().startswith(b"\x89PNG")
 
 print("配布パッケージから標準設定とゲーム画像を読み込めました")

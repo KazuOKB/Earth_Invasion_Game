@@ -43,6 +43,7 @@ class GameSession:
 
     world_width: int
     world_height: int
+    playfield_top: int
     player_settings: PlayerSettings
     weapon_settings: WeaponSettings
     meteor_settings: MeteorSettings
@@ -72,6 +73,7 @@ class GameSession:
         *,
         world_width: int,
         world_height: int,
+        playfield_top: int,
         player_settings: PlayerSettings,
         weapon_settings: WeaponSettings,
         meteor_settings: MeteorSettings,
@@ -87,21 +89,27 @@ class GameSession:
         _check_positive(world_width, "world_width")
         _check_positive(world_height, "world_height")
 
-        if player_settings.width > world_width or player_settings.height > world_height:
-            raise ValueError("プレイヤーの大きさはゲーム画面以下にしてください")
-        if meteor_settings.width > world_width or meteor_settings.height > world_height:
-            raise ValueError("隕石の大きさはゲーム画面以下にしてください")
-        if chaser_settings.width > world_width or chaser_settings.height > world_height:
-            raise ValueError("追尾敵の大きさはゲーム画面以下にしてください")
-        if shooter_settings.width > world_width or shooter_settings.height > world_height:
-            raise ValueError("攻撃敵の大きさはゲーム画面以下にしてください")
-        if boss_settings.width > world_width or boss_settings.height > world_height:
-            raise ValueError("ボスの大きさはゲーム画面以下にしてください")
+        if playfield_top < 0 or playfield_top >= world_height:
+            raise ValueError("playfield_topは0以上かつworld_height未満にしてください")
 
-        player = _create_player(world_width, world_height, player_settings)
+        playfield_height = world_height - playfield_top
+
+        if player_settings.width > world_width or player_settings.height > playfield_height:
+            raise ValueError("プレイヤーの大きさはゲーム領域以下にしてください")
+        if meteor_settings.width > world_width or meteor_settings.height > playfield_height:
+            raise ValueError("隕石の大きさはゲーム領域以下にしてください")
+        if chaser_settings.width > world_width or chaser_settings.height > playfield_height:
+            raise ValueError("追尾敵の大きさはゲーム領域以下にしてください")
+        if shooter_settings.width > world_width or shooter_settings.height > playfield_height:
+            raise ValueError("攻撃敵の大きさはゲーム領域以下にしてください")
+        if boss_settings.width > world_width or boss_settings.height > playfield_height:
+            raise ValueError("ボスの大きさはゲーム領域以下にしてください")
+
+        player = _create_player(world_width, world_height, playfield_top, player_settings)
         return cls(
             world_width=world_width,
             world_height=world_height,
+            playfield_top=playfield_top,
             player_settings=player_settings,
             weapon_settings=weapon_settings,
             meteor_settings=meteor_settings,
@@ -195,6 +203,7 @@ class GameSession:
         self.player = _create_player(
             self.world_width,
             self.world_height,
+            self.playfield_top,
             self.player_settings,
         )
         self.stage = StageProgress(schedule=self.stage.schedule)
@@ -216,6 +225,7 @@ class GameSession:
             direction=command.vertical_direction,
             speed=self.player_settings.movement_speed,
             elapsed_seconds=elapsed_seconds,
+            world_top=self.playfield_top,
             world_height=self.world_height,
         )
 
@@ -264,7 +274,7 @@ class GameSession:
         self.meteors.append(
             Meteor(
                 x=float(self.world_width),
-                y=self.random_source.uniform(0.0, float(maximum_y)),
+                y=self.random_source.uniform(float(self.playfield_top), float(maximum_y)),
                 width=self.meteor_settings.width,
                 height=self.meteor_settings.height,
                 speed=self.random_source.uniform(
@@ -281,6 +291,7 @@ class GameSession:
             chaser.move(
                 elapsed_seconds=elapsed_seconds,
                 target_center_y=player_center_y,
+                world_top=self.playfield_top,
                 world_height=self.world_height,
             )
 
@@ -301,7 +312,7 @@ class GameSession:
         self.chasers.append(
             Chaser(
                 x=float(self.world_width),
-                y=self.random_source.uniform(0.0, float(maximum_y)),
+                y=self.random_source.uniform(float(self.playfield_top), float(maximum_y)),
                 width=self.chaser_settings.width,
                 height=self.chaser_settings.height,
                 horizontal_speed=self.chaser_settings.horizontal_speed,
@@ -330,7 +341,7 @@ class GameSession:
         self.shooters.append(
             Shooter(
                 x=float(self.world_width),
-                y=self.random_source.uniform(0.0, float(maximum_y)),
+                y=self.random_source.uniform(float(self.playfield_top), float(maximum_y)),
                 width=self.shooter_settings.width,
                 height=self.shooter_settings.height,
                 horizontal_speed=self.shooter_settings.horizontal_speed,
@@ -369,7 +380,7 @@ class GameSession:
         self.enemy_projectiles = []
         maximum_x = self.world_width - self.boss_settings.width
         boss_x = max(float(maximum_x) - BOSS_RIGHT_MARGIN, 0.0)
-        boss_y = (self.world_height - self.boss_settings.height) / 2
+        boss_y = (self.playfield_top + self.world_height - self.boss_settings.height) / 2
         self.boss = Boss(
             x=boss_x,
             y=boss_y,
@@ -385,7 +396,7 @@ class GameSession:
         if self.boss is None:
             return
 
-        self.boss.move(elapsed_seconds, self.world_height)
+        self.boss.move(elapsed_seconds, self.playfield_top, self.world_height)
 
     def _update_boss_firing(self, elapsed_seconds: float) -> None:
         if self.current_phase is not GamePhase.BOSS or self.boss is None:
@@ -439,7 +450,7 @@ class GameSession:
             for projectile in self.enemy_projectiles
             if projectile.x + projectile.width > 0
             and projectile.x < self.world_width
-            and projectile.y + projectile.height > 0
+            and projectile.y >= self.playfield_top
             and projectile.y < self.world_height
         ]
 
@@ -592,11 +603,12 @@ class GameSession:
 def _create_player(
     world_width: int,
     world_height: int,
+    playfield_top: int,
     settings: PlayerSettings,
 ) -> Player:
     return Player(
         x=min(PLAYER_START_X, float(world_width - settings.width)),
-        y=(world_height - settings.height) / 2,
+        y=(playfield_top + world_height - settings.height) / 2,
         width=settings.width,
         height=settings.height,
         health=settings.max_health,

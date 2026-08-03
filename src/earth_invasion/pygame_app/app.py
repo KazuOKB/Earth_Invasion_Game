@@ -19,6 +19,7 @@ from earth_invasion.gameplay.settings import (
 )
 from earth_invasion.gameplay.stage import StageSchedule
 from earth_invasion.pygame_app.assets import (
+    load_background_image,
     load_boss_image,
     load_chaser_image,
     load_meteor_image,
@@ -27,12 +28,13 @@ from earth_invasion.pygame_app.assets import (
 )
 from earth_invasion.pygame_app.display import Size, calculate_viewport
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
+from earth_invasion.pygame_app.hud import HUD_HEIGHT, heart_states
 from earth_invasion.pygame_app.input import create_player_command
 
-BACKGROUND_COLOR = (6, 10, 28)
 LETTERBOX_COLOR = (0, 0, 0)
-TITLE_COLOR = (255, 90, 30)
 TEXT_COLOR = (230, 235, 255)
+HUD_COLOR = (6, 10, 28)
+HUD_BORDER_COLOR = (80, 100, 145)
 GAME_OVER_COLOR = (255, 70, 70)
 GAME_CLEAR_COLOR = (100, 255, 160)
 BEAM_COLOR = (100, 235, 255)
@@ -43,6 +45,10 @@ GAUGE_WIDTH = 250
 GAUGE_HEIGHT = 14
 BOSS_HEALTH_WIDTH = 220
 BOSS_HEALTH_HEIGHT = 12
+HEART_COLOR = (245, 70, 90)
+EMPTY_HEART_COLOR = (85, 90, 110)
+HEART_SIZE = 20
+HEART_SPACING = 7
 PLAYER_BLINK_INTERVAL_SECONDS = 0.1
 
 
@@ -67,6 +73,7 @@ class PygameApplication:
             window = pygame.display.set_mode(self.logical_size, pygame.RESIZABLE)
             pygame.display.set_caption("Earth Invasion Game")
             logical_surface = pygame.Surface(self.logical_size)
+            background_image = load_background_image(self.logical_size)
             player_image = load_player_image()
             meteor_image = load_meteor_image()
             chaser_image = load_chaser_image()
@@ -125,6 +132,7 @@ class PygameApplication:
                     title_font,
                     text_font,
                     session,
+                    background_image,
                     player_image,
                     meteor_image,
                     chaser_image,
@@ -166,6 +174,7 @@ class PygameApplication:
         return GameSession.create(
             world_width=self.logical_size[0],
             world_height=self.logical_size[1],
+            playfield_top=HUD_HEIGHT,
             player_settings=PlayerSettings(
                 width=player_width,
                 height=player_height,
@@ -227,31 +236,14 @@ class PygameApplication:
         title_font: pygame.font.Font,
         text_font: pygame.font.Font,
         session: GameSession,
+        background_image: pygame.Surface,
         player_image: pygame.Surface,
         meteor_image: pygame.Surface,
         chaser_image: pygame.Surface,
         shooter_image: pygame.Surface,
         boss_image: pygame.Surface,
     ) -> None:
-        surface.fill(BACKGROUND_COLOR)
-
-        title = title_font.render("Earth Invasion", True, TITLE_COLOR)
-        title_rect = title.get_rect(center=(self.logical_size[0] // 2, 40))
-        surface.blit(title, title_rect)
-
-        remaining_seconds = session.stage.remaining_seconds
-        remaining_text = "no limit" if remaining_seconds is None else f"{remaining_seconds:.1f}s"
-        stage_status = text_font.render(
-            f"Profile: {self.config.stage.profile}    "
-            f"Phase: {session.current_phase.value}    Time: {remaining_text}",
-            True,
-            TEXT_COLOR,
-        )
-        stage_status_rect = stage_status.get_rect(center=(self.logical_size[0] // 2, 78))
-        surface.blit(stage_status, stage_status_rect)
-
-        self._draw_invasion_gauge(surface, text_font, session)
-        self._draw_health(surface, text_font, session)
+        surface.blit(background_image, (0, 0))
 
         for meteor in session.meteors:
             meteor_position = round(meteor.x), round(meteor.y)
@@ -268,7 +260,6 @@ class PygameApplication:
         if session.boss is not None:
             boss_position = round(session.boss.x), round(session.boss.y)
             surface.blit(boss_image, boss_position)
-            self._draw_boss_health(surface, text_font, session)
 
         if self._player_is_visible(session):
             player_position = round(session.player.x), round(session.player.y)
@@ -292,14 +283,43 @@ class PygameApplication:
             )
             pygame.draw.rect(surface, ENEMY_PROJECTILE_COLOR, projectile_rectangle)
 
-        guide = text_font.render("Up / Down: Move    Z: Beam    Esc: Close", True, TEXT_COLOR)
-        guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 475))
-        surface.blit(guide, guide_rect)
+        self._draw_hud(surface, text_font, session)
 
         if session.is_game_over:
             self._draw_game_over(surface, title_font, text_font)
         elif session.is_game_clear:
             self._draw_game_clear(surface, title_font, text_font)
+
+    def _draw_hud(
+        self,
+        surface: pygame.Surface,
+        text_font: pygame.font.Font,
+        session: GameSession,
+    ) -> None:
+        panel = pygame.Rect(0, 0, self.logical_size[0], HUD_HEIGHT)
+        pygame.draw.rect(surface, HUD_COLOR, panel)
+        pygame.draw.line(
+            surface,
+            HUD_BORDER_COLOR,
+            (0, HUD_HEIGHT - 1),
+            (self.logical_size[0], HUD_HEIGHT - 1),
+            width=2,
+        )
+
+        remaining_seconds = session.stage.remaining_seconds
+        remaining_text = "no limit" if remaining_seconds is None else f"{remaining_seconds:.1f}s"
+        stage_status = text_font.render(
+            f"Profile: {self.config.stage.profile}    "
+            f"Phase: {session.current_phase.value}    Time: {remaining_text}",
+            True,
+            TEXT_COLOR,
+        )
+        stage_status_rect = stage_status.get_rect(center=(self.logical_size[0] // 2, 18))
+        surface.blit(stage_status, stage_status_rect)
+
+        self._draw_invasion_gauge(surface, text_font, session)
+        self._draw_hearts(surface, text_font, session)
+        self._draw_boss_health(surface, text_font, session)
 
     def _draw_invasion_gauge(
         self,
@@ -308,7 +328,7 @@ class PygameApplication:
         session: GameSession,
     ) -> None:
         gauge_x = (self.logical_size[0] - GAUGE_WIDTH) // 2
-        gauge_y = 105
+        gauge_y = 44
         invasion_target = session.invasion_settings.target
         gauge_ratio = session.invasion_gauge / invasion_target
         filled_width = round(GAUGE_WIDTH * gauge_ratio)
@@ -323,21 +343,49 @@ class PygameApplication:
             True,
             TEXT_COLOR,
         )
-        label_rect = label.get_rect(center=(self.logical_size[0] // 2, 137))
+        label_rect = label.get_rect(center=(self.logical_size[0] // 2, 78))
         surface.blit(label, label_rect)
 
-    def _draw_health(
+    def _draw_hearts(
         self,
         surface: pygame.Surface,
         text_font: pygame.font.Font,
         session: GameSession,
     ) -> None:
-        health = text_font.render(
-            f"Health: {session.player.health} / {session.player_settings.max_health}",
-            True,
-            TEXT_COLOR,
-        )
-        surface.blit(health, (20, 105))
+        label = text_font.render("LIFE", True, TEXT_COLOR)
+        surface.blit(label, (20, 51))
+
+        for index, is_filled in enumerate(
+            heart_states(session.player.health, session.player_settings.max_health)
+        ):
+            heart_x = 75 + index * (HEART_SIZE + HEART_SPACING)
+            self._draw_heart(surface, heart_x, 50, is_filled)
+
+    def _draw_heart(
+        self,
+        surface: pygame.Surface,
+        x: int,
+        y: int,
+        is_filled: bool,
+    ) -> None:
+        radius = HEART_SIZE // 4
+        left_center = (x + radius + 2, y + radius + 2)
+        right_center = (x + HEART_SIZE - radius - 2, y + radius + 2)
+        body_points = [
+            (x + 1, y + radius + 2),
+            (x + HEART_SIZE - 1, y + radius + 2),
+            (x + HEART_SIZE // 2, y + HEART_SIZE),
+        ]
+
+        if is_filled:
+            pygame.draw.circle(surface, HEART_COLOR, left_center, radius)
+            pygame.draw.circle(surface, HEART_COLOR, right_center, radius)
+            pygame.draw.polygon(surface, HEART_COLOR, body_points)
+            return
+
+        pygame.draw.circle(surface, EMPTY_HEART_COLOR, left_center, radius, width=2)
+        pygame.draw.circle(surface, EMPTY_HEART_COLOR, right_center, radius, width=2)
+        pygame.draw.polygon(surface, EMPTY_HEART_COLOR, body_points, width=2)
 
     def _draw_boss_health(
         self,
@@ -348,8 +396,8 @@ class PygameApplication:
         if session.boss is None:
             return
 
-        gauge_x = (self.logical_size[0] - BOSS_HEALTH_WIDTH) // 2
-        gauge_y = 425
+        gauge_x = self.logical_size[0] - BOSS_HEALTH_WIDTH - 20
+        gauge_y = 65
         health_ratio = session.boss.health / session.boss_settings.max_health
         filled_width = round(BOSS_HEALTH_WIDTH * health_ratio)
         background = pygame.Rect(
@@ -367,7 +415,7 @@ class PygameApplication:
             True,
             TEXT_COLOR,
         )
-        label_rect = label.get_rect(center=(self.logical_size[0] // 2, 410))
+        label_rect = label.get_rect(center=(gauge_x + BOSS_HEALTH_WIDTH // 2, 47))
         surface.blit(label, label_rect)
 
     def _player_is_visible(self, session: GameSession) -> bool:

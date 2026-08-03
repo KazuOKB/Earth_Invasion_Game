@@ -50,6 +50,7 @@ Earth_Invasion_Game/
 │       ├── __main__.py
 │       ├── configuration.py
 │       ├── assets/
+│       │   ├── background.png
 │       │   ├── boss.png
 │       │   ├── chaser.png
 │       │   ├── meteo2.png
@@ -69,10 +70,11 @@ Earth_Invasion_Game/
 │       │   └── status.py
 │       └── pygame_app/
 │           ├── app.py
-│           ├── input.py
 │           ├── assets.py
 │           ├── display.py
-│           └── fixed_step.py
+│           ├── fixed_step.py
+│           ├── hud.py
+│           └── input.py
 └── tests/
     ├── gameplay/
     └── pygame_app/
@@ -90,6 +92,10 @@ pygame_app → gameplay → Python標準ライブラリ
 ```
 
 `gameplay`から`pygame_app`は参照しません。
+
+HUDの高さは`pygame_app/hud.py`で管理します。
+Pygame側からゲームルールへゲーム領域の上端を渡します。
+これにより、ゲームルール側もHUDへ物体を入れません。
 
 ## 5. gameplayの役割
 
@@ -117,6 +123,7 @@ Pygameの画像や音声は扱いません。
 - キーボード入力を受け取る
 - マウス入力を受け取る
 - 画像を描く
+- 宇宙背景とHUDを描く
 - 文字を描く
 - 音を鳴らす
 - 画面を切り替える
@@ -273,6 +280,11 @@ uv run earth-invasion --stage-profile test --check-config
 
 750×500の内部画面を1つ作ります。
 ゲームは内部画面へ描画します。
+
+上部100ピクセルをHUDにします。
+ゲーム領域は`y=100`から`y=500`までです。
+プレイヤーと敵の移動、生成位置、敵弾の削除判定に同じ境界を使います。
+最後にHUDを描画するため、ゲーム内物体は文字やゲージを隠しません。
 
 最後に内部画面をウィンドウへ拡大します。
 縦横比は維持します。
