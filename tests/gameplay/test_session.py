@@ -336,6 +336,18 @@ def test_shooter_spawns_inside_vertical_range() -> None:
     assert 0.0 <= shooter.y <= 460.0
 
 
+def test_shooter_randomness_is_repeatable_with_same_seed() -> None:
+    first_session = _create_session(random_seed=10)
+    second_session = _create_session(random_seed=10)
+    first_session.stage.update(elapsed_seconds=75.0, invasion_gauge_is_full=False)
+    second_session.stage.update(elapsed_seconds=75.0, invasion_gauge_is_full=False)
+
+    first_session.update(PlayerCommand(), elapsed_seconds=1.0)
+    second_session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    assert first_session.shooters == second_session.shooters
+
+
 def test_shooter_moves_left_and_is_removed_after_leaving_screen() -> None:
     session = _create_session()
     shooter = _create_shooter(x=500.0, y=200.0)

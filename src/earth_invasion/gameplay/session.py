@@ -130,7 +130,7 @@ class GameSession:
         self._resolve_beam_meteor_collisions()
         self._resolve_beam_chaser_collisions()
         self._resolve_beam_shooter_collisions()
-        self._resolve_player_enemy_collisions()
+        self._resolve_player_damage_collisions()
         self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
 
     @property
@@ -352,9 +352,9 @@ class GameSession:
         self.enemy_projectiles = [
             projectile
             for projectile in self.enemy_projectiles
-            if projectile.x + ENEMY_PROJECTILE_WIDTH > 0
+            if projectile.x + projectile.width > 0
             and projectile.x < self.world_width
-            and projectile.y + ENEMY_PROJECTILE_HEIGHT > 0
+            and projectile.y + projectile.height > 0
             and projectile.y < self.world_height
         ]
 
@@ -448,7 +448,7 @@ class GameSession:
             self.invasion_settings.target,
         )
 
-    def _resolve_player_enemy_collisions(self) -> None:
+    def _resolve_player_damage_collisions(self) -> None:
         meteor_count_before_collision = len(self.meteors)
         chaser_count_before_collision = len(self.chasers)
         shooter_count_before_collision = len(self.shooters)
@@ -469,13 +469,13 @@ class GameSession:
             if not rectangles_overlap(self.player, projectile)
         ]
 
-        enemy_touched_player = (
+        hazard_touched_player = (
             len(self.meteors) < meteor_count_before_collision
             or len(self.chasers) < chaser_count_before_collision
             or len(self.shooters) < shooter_count_before_collision
             or len(self.enemy_projectiles) < projectile_count_before_collision
         )
-        if enemy_touched_player:
+        if hazard_touched_player:
             self.player.take_damage(
                 damage=1,
                 invincibility_seconds=self.player_settings.invincibility_seconds,
