@@ -35,6 +35,10 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.shooter.horizontal_speed_pixels_per_second == 120.0
     assert config.gameplay.shooter.shot_interval_seconds == 0.8
     assert config.gameplay.shooter.projectile_speed_pixels_per_second == 300.0
+    assert config.gameplay.boss.max_health == 20
+    assert config.gameplay.boss.vertical_speed_pixels_per_second == 100.0
+    assert config.gameplay.boss.shot_interval_seconds == 0.6
+    assert config.gameplay.boss.projectile_speed_pixels_per_second == 360.0
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
@@ -147,6 +151,18 @@ def test_non_positive_shooter_projectile_speed_is_rejected(tmp_path: Path) -> No
         load_gameplay_config(path)
 
 
+def test_non_positive_boss_health_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "gameplay.json"
+    data = _gameplay_config_data()
+    boss = data["boss"]
+    assert isinstance(boss, dict)
+    boss["max_health"] = 0
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="max_health"):
+        load_gameplay_config(path)
+
+
 def test_non_positive_duration_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "stage.json"
     _write_stage_config(path, meteor_duration=0)
@@ -243,6 +259,12 @@ def _gameplay_config_data() -> dict[str, object]:
             "horizontal_speed_pixels_per_second": 120.0,
             "shot_interval_seconds": 0.8,
             "projectile_speed_pixels_per_second": 300.0,
+        },
+        "boss": {
+            "max_health": 20,
+            "vertical_speed_pixels_per_second": 100.0,
+            "shot_interval_seconds": 0.6,
+            "projectile_speed_pixels_per_second": 360.0,
         },
         "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
     }

@@ -95,6 +95,26 @@ class ShooterSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class BossSettings:
+    """ボスの大きさ、耐久力、移動、射撃。"""
+
+    width: int
+    height: int
+    max_health: int
+    vertical_speed: float
+    shot_interval_seconds: float
+    projectile_speed: float
+
+    def __post_init__(self) -> None:
+        _check_positive(self.width, "boss.width")
+        _check_positive(self.height, "boss.height")
+        _check_positive(self.max_health, "boss.max_health")
+        _check_positive(self.vertical_speed, "boss.vertical_speed")
+        _check_positive(self.shot_interval_seconds, "boss.shot_interval_seconds")
+        _check_positive(self.projectile_speed, "boss.projectile_speed")
+
+
+@dataclass(frozen=True, slots=True)
 class InvasionSettings:
     """侵略ゲージの上限と敵ごとの増加量。"""
 

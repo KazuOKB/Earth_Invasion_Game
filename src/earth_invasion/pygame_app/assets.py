@@ -35,6 +35,12 @@ def load_shooter_image() -> pygame.Surface:
     return pygame.transform.smoothscale(_load_image("shooter.png"), SHOOTER_IMAGE_SIZE)
 
 
+def load_boss_image() -> pygame.Surface:
+    """地球防衛ボスの画像を読み込む。"""
+
+    return _load_image("boss.png")
+
+
 def _load_image(filename: str) -> pygame.Surface:
     resource = files(ASSET_PACKAGE).joinpath(filename)
     image_data = BytesIO(resource.read_bytes())

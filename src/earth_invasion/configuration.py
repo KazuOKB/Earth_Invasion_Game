@@ -75,6 +75,16 @@ class ShooterConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class BossConfig:
+    """ボスの耐久力、移動、射撃の設定。"""
+
+    max_health: int
+    vertical_speed_pixels_per_second: float
+    shot_interval_seconds: float
+    projectile_speed_pixels_per_second: float
+
+
+@dataclass(frozen=True, slots=True)
 class InvasionRewards:
     """敵を倒したときに増える侵略ゲージの量。"""
 
@@ -94,6 +104,7 @@ class GameplayConfig:
     meteor: MeteorConfig
     chaser: ChaserConfig
     shooter: ShooterConfig
+    boss: BossConfig
     invasion_rewards: InvasionRewards
 
 
@@ -163,6 +174,7 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     meteor = _required_object(data, "meteor", "gameplay")
     chaser = _required_object(data, "chaser", "gameplay")
     shooter = _required_object(data, "shooter", "gameplay")
+    boss = _required_object(data, "boss", "gameplay")
     rewards = _required_object(data, "invasion_rewards", "gameplay")
 
     meteor_config = _parse_meteor_config(meteor)
@@ -236,6 +248,24 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
                 shooter,
                 "projectile_speed_pixels_per_second",
                 "shooter",
+            ),
+        ),
+        boss=BossConfig(
+            max_health=_positive_int(boss, "max_health", "boss"),
+            vertical_speed_pixels_per_second=_positive_number(
+                boss,
+                "vertical_speed_pixels_per_second",
+                "boss",
+            ),
+            shot_interval_seconds=_positive_number(
+                boss,
+                "shot_interval_seconds",
+                "boss",
+            ),
+            projectile_speed_pixels_per_second=_positive_number(
+                boss,
+                "projectile_speed_pixels_per_second",
+                "boss",
             ),
         ),
         invasion_rewards=InvasionRewards(

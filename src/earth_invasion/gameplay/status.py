@@ -8,3 +8,4 @@ class GameStatus(Enum):
 
     PLAYING = "playing"
     GAME_OVER = "game_over"
+    GAME_CLEAR = "game_clear"

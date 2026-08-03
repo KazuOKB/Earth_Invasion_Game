@@ -11,6 +11,7 @@ from earth_invasion.gameplay.commands import PlayerCommand
 from earth_invasion.gameplay.entities import Beam, Chaser, EnemyProjectile, Meteor, Shooter
 from earth_invasion.gameplay.session import GameSession
 from earth_invasion.gameplay.settings import (
+    BossSettings,
     ChaserSettings,
     InvasionSettings,
     MeteorSettings,
@@ -438,6 +439,134 @@ def test_enemy_projectile_damages_player_and_is_removed() -> None:
     assert session.enemy_projectiles == []
 
 
+def test_boss_does_not_appear_without_full_invasion_gauge() -> None:
+    session = _create_session()
+
+    session.stage.update(elapsed_seconds=135.0, invasion_gauge_is_full=False)
+    session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    assert session.current_phase is GamePhase.SHOOTER
+    assert session.boss is None
+
+
+def test_boss_appears_with_configured_health_and_position() -> None:
+    session = _create_session()
+
+    _enter_boss_phase(session)
+
+    assert session.current_phase is GamePhase.BOSS
+    assert session.boss is not None
+    assert session.boss.x == 537.0
+    assert session.boss.y == 175.0
+    assert session.boss.health == 20
+
+
+def test_entering_boss_phase_removes_remaining_enemies_and_projectiles() -> None:
+    session = _create_session()
+    session.meteors.append(_create_meteor(x=600.0, y=100.0))
+    session.chasers.append(_create_chaser(x=600.0, y=100.0))
+    session.shooters.append(_create_shooter(x=600.0, y=100.0))
+    session.enemy_projectiles.append(
+        EnemyProjectile(x=500.0, y=200.0, velocity_x=-300.0, velocity_y=0.0)
+    )
+
+    _enter_boss_phase(session)
+
+    assert session.meteors == []
+    assert session.chasers == []
+    assert session.shooters == []
+    assert session.enemy_projectiles == []
+
+
+def test_boss_moves_vertically_and_turns_at_screen_edge() -> None:
+    session = _create_session()
+    _enter_boss_phase(session)
+    assert session.boss is not None
+
+    session.update(PlayerCommand(), elapsed_seconds=0.5)
+
+    assert session.boss.y == 225.0
+
+    session.boss.y = 350.0
+    session.boss.vertical_direction = 1
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.boss.y == 350.0
+    assert session.boss.vertical_direction == -1
+
+
+def test_boss_fires_toward_player_after_configured_interval() -> None:
+    session = _create_session()
+    _enter_boss_phase(session)
+
+    session.update(PlayerCommand(), elapsed_seconds=0.59)
+
+    assert session.enemy_projectiles == []
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    projectile = session.enemy_projectiles[0]
+    assert projectile.velocity_x < 0.0
+    assert math.hypot(projectile.velocity_x, projectile.velocity_y) == pytest.approx(360.0)
+
+
+def test_beam_damages_boss_and_is_removed() -> None:
+    session = _create_session()
+    _enter_boss_phase(session)
+    session.beams.append(Beam(x=540.0, y=200.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.beams == []
+    assert session.boss is not None
+    assert session.boss.health == 19
+
+
+def test_defeating_boss_changes_status_to_game_clear() -> None:
+    session = _create_session()
+    _enter_boss_phase(session)
+    assert session.boss is not None
+    session.boss.health = 1
+    session.beams.append(Beam(x=540.0, y=200.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.boss.is_defeated
+    assert session.is_game_clear
+    assert session.is_finished
+
+
+def test_game_clear_stops_game_updates() -> None:
+    session = _create_session()
+    _trigger_game_clear(session)
+    assert session.boss is not None
+    player_y = session.player.y
+    boss_y = session.boss.y
+    stage_elapsed_seconds = session.stage.elapsed_seconds
+
+    session.update(
+        PlayerCommand(vertical_direction=1, fire_pressed=True),
+        elapsed_seconds=0.5,
+    )
+
+    assert session.player.y == player_y
+    assert session.boss.y == boss_y
+    assert session.stage.elapsed_seconds == stage_elapsed_seconds
+    assert session.beams == []
+
+
+def test_restart_after_game_clear_resets_boss_and_status() -> None:
+    session = _create_session()
+    _trigger_game_clear(session)
+
+    session.restart()
+
+    assert not session.is_finished
+    assert session.boss is None
+    assert session.current_phase is GamePhase.METEOR
+    assert session.invasion_gauge == 0
+
+
 def test_meteor_contact_damages_player_and_removes_meteor() -> None:
     session = _create_session()
     session.meteors.append(_create_meteor(x=120.0, y=220.0))
@@ -629,6 +758,14 @@ def _create_session(random_seed: int = 1) -> GameSession:
             shot_interval_seconds=0.8,
             projectile_speed=300.0,
         ),
+        boss_settings=BossSettings(
+            width=173,
+            height=150,
+            max_health=20,
+            vertical_speed=100.0,
+            shot_interval_seconds=0.6,
+            projectile_speed=360.0,
+        ),
         invasion_settings=InvasionSettings(
             target=100,
             meteor_reward=2,
@@ -679,4 +816,18 @@ def _create_shooter(x: float, y: float, shot_cooldown: float = 0.8) -> Shooter:
 def _trigger_game_over(session: GameSession) -> None:
     session.player.health = 1
     session.meteors.append(_create_meteor(x=120.0, y=220.0))
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+
+def _enter_boss_phase(session: GameSession) -> None:
+    session.invasion_gauge = session.invasion_settings.target
+    session.stage.update(elapsed_seconds=134.99, invasion_gauge_is_full=True)
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+
+def _trigger_game_clear(session: GameSession) -> None:
+    _enter_boss_phase(session)
+    assert session.boss is not None
+    session.boss.health = 1
+    session.beams.append(Beam(x=540.0, y=200.0))
     session.update(PlayerCommand(), elapsed_seconds=0.01)
