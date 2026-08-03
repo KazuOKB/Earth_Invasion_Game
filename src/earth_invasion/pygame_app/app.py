@@ -13,6 +13,7 @@ from earth_invasion.gameplay.settings import (
     InvasionSettings,
     MeteorSettings,
     PlayerSettings,
+    ShooterSettings,
     WeaponSettings,
 )
 from earth_invasion.gameplay.stage import StageSchedule
@@ -20,6 +21,7 @@ from earth_invasion.pygame_app.assets import (
     load_chaser_image,
     load_meteor_image,
     load_player_image,
+    load_shooter_image,
 )
 from earth_invasion.pygame_app.display import Size, calculate_viewport
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
@@ -31,6 +33,7 @@ TITLE_COLOR = (255, 90, 30)
 TEXT_COLOR = (230, 235, 255)
 GAME_OVER_COLOR = (255, 70, 70)
 BEAM_COLOR = (100, 235, 255)
+ENEMY_PROJECTILE_COLOR = (255, 80, 80)
 GAUGE_COLOR = (255, 100, 40)
 GAUGE_BACKGROUND_COLOR = (45, 50, 70)
 GAUGE_WIDTH = 250
@@ -62,10 +65,12 @@ class PygameApplication:
             player_image = load_player_image()
             meteor_image = load_meteor_image()
             chaser_image = load_chaser_image()
+            shooter_image = load_shooter_image()
             session = self._create_session(
                 player_image.get_size(),
                 meteor_image.get_size(),
                 chaser_image.get_size(),
+                shooter_image.get_size(),
             )
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
             title_font = pygame.font.Font(None, 48)
@@ -116,6 +121,7 @@ class PygameApplication:
                     player_image,
                     meteor_image,
                     chaser_image,
+                    shooter_image,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -133,14 +139,17 @@ class PygameApplication:
         player_size: Size,
         meteor_size: Size,
         chaser_size: Size,
+        shooter_size: Size,
     ) -> GameSession:
         player_width, player_height = player_size
         meteor_width, meteor_height = meteor_size
         chaser_width, chaser_height = chaser_size
+        shooter_width, shooter_height = shooter_size
         player_config = self.config.gameplay.player
         weapon_config = self.config.gameplay.weapon
         meteor_config = self.config.gameplay.meteor
         chaser_config = self.config.gameplay.chaser
+        shooter_config = self.config.gameplay.shooter
         invasion_rewards = self.config.gameplay.invasion_rewards
         stage_config = self.config.stage
         return GameSession.create(
@@ -171,10 +180,19 @@ class PygameApplication:
                 horizontal_speed=chaser_config.horizontal_speed_pixels_per_second,
                 tracking_speed=chaser_config.tracking_speed_pixels_per_second,
             ),
+            shooter_settings=ShooterSettings(
+                width=shooter_width,
+                height=shooter_height,
+                spawn_interval_seconds=shooter_config.spawn_interval_seconds,
+                horizontal_speed=shooter_config.horizontal_speed_pixels_per_second,
+                shot_interval_seconds=shooter_config.shot_interval_seconds,
+                projectile_speed=shooter_config.projectile_speed_pixels_per_second,
+            ),
             invasion_settings=InvasionSettings(
                 target=stage_config.invasion_target,
                 meteor_reward=invasion_rewards.meteor,
                 chaser_reward=invasion_rewards.chaser,
+                shooter_reward=invasion_rewards.shooter,
             ),
             stage_schedule=StageSchedule(
                 meteor_duration_seconds=stage_config.duration_seconds_for("meteor"),
@@ -193,6 +211,7 @@ class PygameApplication:
         player_image: pygame.Surface,
         meteor_image: pygame.Surface,
         chaser_image: pygame.Surface,
+        shooter_image: pygame.Surface,
     ) -> None:
         surface.fill(BACKGROUND_COLOR)
 
@@ -222,6 +241,10 @@ class PygameApplication:
             chaser_position = round(chaser.x), round(chaser.y)
             surface.blit(chaser_image, chaser_position)
 
+        for shooter in session.shooters:
+            shooter_position = round(shooter.x), round(shooter.y)
+            surface.blit(shooter_image, shooter_position)
+
         if self._player_is_visible(session):
             player_position = round(session.player.x), round(session.player.y)
             surface.blit(player_image, player_position)
@@ -234,6 +257,15 @@ class PygameApplication:
                 beam.height,
             )
             pygame.draw.rect(surface, BEAM_COLOR, beam_rectangle)
+
+        for projectile in session.enemy_projectiles:
+            projectile_rectangle = pygame.Rect(
+                round(projectile.x),
+                round(projectile.y),
+                projectile.width,
+                projectile.height,
+            )
+            pygame.draw.rect(surface, ENEMY_PROJECTILE_COLOR, projectile_rectangle)
 
         guide = text_font.render("Up / Down: Move    Z: Beam    Esc: Close", True, TEXT_COLOR)
         guide_rect = guide.get_rect(center=(self.logical_size[0] // 2, 475))
