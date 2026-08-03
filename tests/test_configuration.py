@@ -31,6 +31,10 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.chaser.spawn_interval_seconds == 0.8
     assert config.gameplay.chaser.horizontal_speed_pixels_per_second == 240.0
     assert config.gameplay.chaser.tracking_speed_pixels_per_second == 180.0
+    assert config.gameplay.shooter.spawn_interval_seconds == 1.0
+    assert config.gameplay.shooter.horizontal_speed_pixels_per_second == 120.0
+    assert config.gameplay.shooter.shot_interval_seconds == 0.8
+    assert config.gameplay.shooter.projectile_speed_pixels_per_second == 300.0
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
@@ -131,6 +135,18 @@ def test_non_positive_chaser_tracking_speed_is_rejected(tmp_path: Path) -> None:
         load_gameplay_config(path)
 
 
+def test_non_positive_shooter_projectile_speed_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "gameplay.json"
+    data = _gameplay_config_data()
+    shooter = data["shooter"]
+    assert isinstance(shooter, dict)
+    shooter["projectile_speed_pixels_per_second"] = 0
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="projectile_speed_pixels_per_second"):
+        load_gameplay_config(path)
+
+
 def test_non_positive_duration_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "stage.json"
     _write_stage_config(path, meteor_duration=0)
@@ -221,6 +237,12 @@ def _gameplay_config_data() -> dict[str, object]:
             "spawn_interval_seconds": 0.8,
             "horizontal_speed_pixels_per_second": 240.0,
             "tracking_speed_pixels_per_second": 180.0,
+        },
+        "shooter": {
+            "spawn_interval_seconds": 1.0,
+            "horizontal_speed_pixels_per_second": 120.0,
+            "shot_interval_seconds": 0.8,
+            "projectile_speed_pixels_per_second": 300.0,
         },
         "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
     }

@@ -65,6 +65,16 @@ class ChaserConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ShooterConfig:
+    """攻撃敵の出現、移動、射撃の設定。"""
+
+    spawn_interval_seconds: float
+    horizontal_speed_pixels_per_second: float
+    shot_interval_seconds: float
+    projectile_speed_pixels_per_second: float
+
+
+@dataclass(frozen=True, slots=True)
 class InvasionRewards:
     """敵を倒したときに増える侵略ゲージの量。"""
 
@@ -83,6 +93,7 @@ class GameplayConfig:
     weapon: WeaponConfig
     meteor: MeteorConfig
     chaser: ChaserConfig
+    shooter: ShooterConfig
     invasion_rewards: InvasionRewards
 
 
@@ -151,6 +162,7 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     weapon = _required_object(data, "weapon", "gameplay")
     meteor = _required_object(data, "meteor", "gameplay")
     chaser = _required_object(data, "chaser", "gameplay")
+    shooter = _required_object(data, "shooter", "gameplay")
     rewards = _required_object(data, "invasion_rewards", "gameplay")
 
     meteor_config = _parse_meteor_config(meteor)
@@ -202,6 +214,28 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
                 chaser,
                 "tracking_speed_pixels_per_second",
                 "chaser",
+            ),
+        ),
+        shooter=ShooterConfig(
+            spawn_interval_seconds=_positive_number(
+                shooter,
+                "spawn_interval_seconds",
+                "shooter",
+            ),
+            horizontal_speed_pixels_per_second=_positive_number(
+                shooter,
+                "horizontal_speed_pixels_per_second",
+                "shooter",
+            ),
+            shot_interval_seconds=_positive_number(
+                shooter,
+                "shot_interval_seconds",
+                "shooter",
+            ),
+            projectile_speed_pixels_per_second=_positive_number(
+                shooter,
+                "projectile_speed_pixels_per_second",
+                "shooter",
             ),
         ),
         invasion_rewards=InvasionRewards(

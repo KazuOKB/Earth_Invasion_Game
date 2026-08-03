@@ -8,6 +8,7 @@ from io import BytesIO
 import pygame
 
 ASSET_PACKAGE = "earth_invasion.assets"
+SHOOTER_IMAGE_SIZE = (60, 40)
 
 
 def load_player_image() -> pygame.Surface:
@@ -26,6 +27,12 @@ def load_chaser_image() -> pygame.Surface:
     """追尾敵の画像を読み込む。"""
 
     return _load_image("chaser.png")
+
+
+def load_shooter_image() -> pygame.Surface:
+    """攻撃敵のUFO画像を読み込み、ゲーム用の大きさへ縮小する。"""
+
+    return pygame.transform.smoothscale(_load_image("shooter.png"), SHOOTER_IMAGE_SIZE)
 
 
 def _load_image(filename: str) -> pygame.Surface:

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 BEAM_WIDTH = 24
 BEAM_HEIGHT = 6
+ENEMY_PROJECTILE_WIDTH = 14
+ENEMY_PROJECTILE_HEIGHT = 8
 
 
 @dataclass(slots=True)
@@ -124,3 +126,46 @@ class Chaser:
         )
         maximum_y = world_height - self.height
         self.y = min(max(self.y + tracking_distance, 0.0), float(maximum_y))
+
+
+@dataclass(slots=True)
+class Shooter:
+    """左へ進みながらプレイヤーへ弾を撃つ敵。"""
+
+    x: float
+    y: float
+    width: int
+    height: int
+    horizontal_speed: float
+    shot_cooldown_remaining: float
+
+    def move(self, elapsed_seconds: float) -> None:
+        """一定の速度で左へ移動する。"""
+
+        self.x -= self.horizontal_speed * elapsed_seconds
+
+    def update_shot_cooldown(self, elapsed_seconds: float) -> None:
+        """次に射撃できるまでの時間を減らす。"""
+
+        self.shot_cooldown_remaining = max(
+            self.shot_cooldown_remaining - elapsed_seconds,
+            0.0,
+        )
+
+
+@dataclass(slots=True)
+class EnemyProjectile:
+    """攻撃敵が発射する弾。"""
+
+    x: float
+    y: float
+    velocity_x: float
+    velocity_y: float
+    width: int = ENEMY_PROJECTILE_WIDTH
+    height: int = ENEMY_PROJECTILE_HEIGHT
+
+    def move(self, elapsed_seconds: float) -> None:
+        """発射時に決めた向きへ移動する。"""
+
+        self.x += self.velocity_x * elapsed_seconds
+        self.y += self.velocity_y * elapsed_seconds

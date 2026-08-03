@@ -75,17 +75,39 @@ class ChaserSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class ShooterSettings:
+    """攻撃敵の大きさ、出現間隔、移動、射撃。"""
+
+    width: int
+    height: int
+    spawn_interval_seconds: float
+    horizontal_speed: float
+    shot_interval_seconds: float
+    projectile_speed: float
+
+    def __post_init__(self) -> None:
+        _check_positive(self.width, "shooter.width")
+        _check_positive(self.height, "shooter.height")
+        _check_positive(self.spawn_interval_seconds, "shooter.spawn_interval_seconds")
+        _check_positive(self.horizontal_speed, "shooter.horizontal_speed")
+        _check_positive(self.shot_interval_seconds, "shooter.shot_interval_seconds")
+        _check_positive(self.projectile_speed, "shooter.projectile_speed")
+
+
+@dataclass(frozen=True, slots=True)
 class InvasionSettings:
     """侵略ゲージの上限と敵ごとの増加量。"""
 
     target: int
     meteor_reward: int
     chaser_reward: int
+    shooter_reward: int
 
     def __post_init__(self) -> None:
         _check_positive(self.target, "invasion.target")
         _check_positive(self.meteor_reward, "invasion.meteor_reward")
         _check_positive(self.chaser_reward, "invasion.chaser_reward")
+        _check_positive(self.shooter_reward, "invasion.shooter_reward")
 
 
 def _check_positive(value: int | float, name: str) -> None:

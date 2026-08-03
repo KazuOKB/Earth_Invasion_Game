@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+import math
 import random
 
 import pytest
 
 from earth_invasion.gameplay.commands import PlayerCommand
-from earth_invasion.gameplay.entities import Beam, Chaser, Meteor
+from earth_invasion.gameplay.entities import Beam, Chaser, EnemyProjectile, Meteor, Shooter
 from earth_invasion.gameplay.session import GameSession
 from earth_invasion.gameplay.settings import (
     ChaserSettings,
     InvasionSettings,
     MeteorSettings,
     PlayerSettings,
+    ShooterSettings,
     WeaponSettings,
 )
 from earth_invasion.gameplay.stage import GamePhase, StageSchedule
@@ -309,6 +311,121 @@ def test_beam_destroys_chaser_and_increases_invasion_gauge() -> None:
     assert session.invasion_gauge == 5
 
 
+def test_shooter_spawns_only_after_entering_shooter_phase() -> None:
+    session = _create_session()
+
+    session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    assert session.shooters == []
+
+    session.stage.update(elapsed_seconds=74.0, invasion_gauge_is_full=False)
+    session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    assert session.current_phase is GamePhase.SHOOTER
+    assert len(session.shooters) == 1
+
+
+def test_shooter_spawns_inside_vertical_range() -> None:
+    session = _create_session()
+    session.stage.update(elapsed_seconds=75.0, invasion_gauge_is_full=False)
+
+    session.update(PlayerCommand(), elapsed_seconds=1.0)
+
+    shooter = session.shooters[0]
+    assert shooter.x == 750.0
+    assert 0.0 <= shooter.y <= 460.0
+
+
+def test_shooter_moves_left_and_is_removed_after_leaving_screen() -> None:
+    session = _create_session()
+    shooter = _create_shooter(x=500.0, y=200.0)
+    session.shooters.append(shooter)
+
+    session.update(PlayerCommand(), elapsed_seconds=0.5)
+
+    assert shooter.x == 440.0
+
+    shooter.x = -float(shooter.width)
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.shooters == []
+
+
+def test_shooter_fires_toward_player_after_configured_interval() -> None:
+    session = _create_session()
+    session.stage.update(elapsed_seconds=75.0, invasion_gauge_is_full=False)
+    session.shooters.append(_create_shooter(x=600.0, y=100.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.79)
+
+    assert session.enemy_projectiles == []
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    projectile = session.enemy_projectiles[0]
+    assert projectile.velocity_x < 0.0
+    assert math.hypot(projectile.velocity_x, projectile.velocity_y) == pytest.approx(300.0)
+
+
+def test_enemy_projectile_moves_and_is_removed_outside_screen() -> None:
+    session = _create_session()
+    projectile = EnemyProjectile(
+        x=500.0,
+        y=200.0,
+        velocity_x=-300.0,
+        velocity_y=0.0,
+    )
+    session.enemy_projectiles.append(projectile)
+
+    session.update(PlayerCommand(), elapsed_seconds=0.5)
+
+    assert projectile.x == 350.0
+
+    projectile.x = -float(projectile.width)
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.enemy_projectiles == []
+
+
+def test_beam_destroys_shooter_and_increases_invasion_gauge() -> None:
+    session = _create_session()
+    session.beams.append(Beam(x=300.0, y=200.0))
+    session.shooters.append(_create_shooter(x=310.0, y=195.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.beams == []
+    assert session.shooters == []
+    assert session.invasion_gauge == 10
+
+
+def test_shooter_contact_damages_player_and_removes_shooter() -> None:
+    session = _create_session()
+    session.shooters.append(_create_shooter(x=120.0, y=220.0))
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 2
+    assert session.shooters == []
+
+
+def test_enemy_projectile_damages_player_and_is_removed() -> None:
+    session = _create_session()
+    session.enemy_projectiles.append(
+        EnemyProjectile(
+            x=120.0,
+            y=235.0,
+            velocity_x=0.0,
+            velocity_y=0.0,
+        )
+    )
+
+    session.update(PlayerCommand(), elapsed_seconds=0.01)
+
+    assert session.player.health == 2
+    assert session.enemy_projectiles == []
+
+
 def test_meteor_contact_damages_player_and_removes_meteor() -> None:
     session = _create_session()
     session.meteors.append(_create_meteor(x=120.0, y=220.0))
@@ -393,10 +510,16 @@ def test_game_over_stops_game_updates() -> None:
     session = _create_session()
     session.beams.append(Beam(x=200.0, y=100.0))
     session.chasers.append(_create_chaser(x=600.0, y=100.0))
+    session.shooters.append(_create_shooter(x=650.0, y=150.0))
+    session.enemy_projectiles.append(
+        EnemyProjectile(x=500.0, y=200.0, velocity_x=-300.0, velocity_y=0.0)
+    )
     _trigger_game_over(session)
     player_y = session.player.y
     beam_x = session.beams[0].x
     chaser_x = session.chasers[0].x
+    shooter_x = session.shooters[0].x
+    projectile_x = session.enemy_projectiles[0].x
     stage_elapsed_seconds = session.stage.elapsed_seconds
     invincibility_remaining = session.player.invincibility_remaining
 
@@ -410,6 +533,8 @@ def test_game_over_stops_game_updates() -> None:
     assert session.player.invincibility_remaining == invincibility_remaining
     assert session.beams[0].x == beam_x
     assert session.chasers[0].x == chaser_x
+    assert session.shooters[0].x == shooter_x
+    assert session.enemy_projectiles[0].x == projectile_x
 
 
 def test_restart_resets_all_game_state() -> None:
@@ -418,6 +543,10 @@ def test_restart_resets_all_game_state() -> None:
     session.stage.update(elapsed_seconds=30.0, invasion_gauge_is_full=False)
     session.beams.append(Beam(x=300.0, y=200.0))
     session.chasers.append(_create_chaser(x=600.0, y=100.0))
+    session.shooters.append(_create_shooter(x=650.0, y=150.0))
+    session.enemy_projectiles.append(
+        EnemyProjectile(x=500.0, y=200.0, velocity_x=-300.0, velocity_y=0.0)
+    )
     _trigger_game_over(session)
 
     session.restart()
@@ -433,9 +562,12 @@ def test_restart_resets_all_game_state() -> None:
     assert session.beams == []
     assert session.meteors == []
     assert session.chasers == []
+    assert session.shooters == []
+    assert session.enemy_projectiles == []
     assert session.beam_cooldown_remaining == 0.0
     assert session.meteor_spawn_remaining == 1.2
     assert session.chaser_spawn_remaining == 0.8
+    assert session.shooter_spawn_remaining == 1.0
 
 
 def test_restart_allows_game_updates_again() -> None:
@@ -477,10 +609,19 @@ def _create_session(random_seed: int = 1) -> GameSession:
             horizontal_speed=240.0,
             tracking_speed=180.0,
         ),
+        shooter_settings=ShooterSettings(
+            width=60,
+            height=40,
+            spawn_interval_seconds=1.0,
+            horizontal_speed=120.0,
+            shot_interval_seconds=0.8,
+            projectile_speed=300.0,
+        ),
         invasion_settings=InvasionSettings(
             target=100,
             meteor_reward=2,
             chaser_reward=5,
+            shooter_reward=10,
         ),
         stage_schedule=StageSchedule(
             meteor_duration_seconds=30.0,
@@ -509,6 +650,17 @@ def _create_chaser(x: float, y: float) -> Chaser:
         height=29,
         horizontal_speed=240.0,
         tracking_speed=180.0,
+    )
+
+
+def _create_shooter(x: float, y: float, shot_cooldown: float = 0.8) -> Shooter:
+    return Shooter(
+        x=x,
+        y=y,
+        width=60,
+        height=40,
+        horizontal_speed=120.0,
+        shot_cooldown_remaining=shot_cooldown,
     )
 
 
