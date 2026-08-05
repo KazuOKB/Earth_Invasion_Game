@@ -34,6 +34,7 @@ def create_game_session(
     chaser_width, chaser_height = images.chaser.get_size()
     shooter_width, shooter_height = images.shooter.get_size()
     boss_width, boss_height = images.boss.get_size()
+    session_random = random_source if random_source is not None else random.Random()
 
     return GameSession.create(
         world_width=gameplay.logical_resolution.width,
@@ -91,5 +92,5 @@ def create_game_session(
             chaser_duration_seconds=stage.duration_seconds_for("chaser"),
             shooter_duration_seconds=stage.duration_seconds_for("shooter"),
         ),
-        random_source=random_source or random.Random(),
+        random_source=session_random,
     )

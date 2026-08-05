@@ -13,6 +13,7 @@ from earth_invasion.pygame_app.session_factory import create_game_session
 
 
 def test_gameplay_renderer_draws_hud_over_background() -> None:
+    font_was_initialized = pygame.font.get_init()
     pygame.font.init()
     try:
         images = _create_images()
@@ -26,7 +27,8 @@ def test_gameplay_renderer_draws_hud_over_background() -> None:
         assert surface.get_at((0, 0))[:3] == HUD_COLOR
         assert surface.get_at((0, HUD_HEIGHT + 1))[:3] == (1, 2, 3)
     finally:
-        pygame.font.quit()
+        if not font_was_initialized:
+            pygame.font.quit()
 
 
 def _create_images() -> GameImages:
