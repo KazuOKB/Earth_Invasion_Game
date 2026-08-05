@@ -24,23 +24,11 @@ assert files("earth_invasion.assets").joinpath("chaser.png").read_bytes().starts
 assert files("earth_invasion.assets").joinpath("shooter.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("boss.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("background.png").read_bytes().startswith(b"\x89PNG")
-assert (
-    files("earth_invasion.assets")
-    .joinpath("music/bright_title.wav")
-    .read_bytes()
-    .startswith(b"RIFF")
-)
-assert (
-    files("earth_invasion.assets")
-    .joinpath("music/cheerful_invasion.wav")
-    .read_bytes()
-    .startswith(b"RIFF")
-)
-assert (
-    files("earth_invasion.assets")
-    .joinpath("music/defense_boss.wav")
-    .read_bytes()
-    .startswith(b"RIFF")
-)
+for music_file in (
+    "music/bright_title.ogg",
+    "music/cheerful_invasion.ogg",
+    "music/defense_boss.ogg",
+):
+    assert files("earth_invasion.assets").joinpath(music_file).read_bytes().startswith(b"OggS")
 
 print("配布パッケージから標準設定、画像、BGMを読み込めました")

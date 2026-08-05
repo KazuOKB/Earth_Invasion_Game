@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -40,6 +41,23 @@ def test_application_runs_one_frame(
 
     assert app.run(frame_limit=1) == 0
     assert text_input_was_stopped
+
+
+def test_application_async_api_runs_one_frame(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
+
+    from earth_invasion.pygame_app.app import PygameApplication
+
+    app = PygameApplication(
+        load_application_config("test"),
+        ranking_path=tmp_path / "ranking.json",
+    )
+
+    assert asyncio.run(app.run_async(frame_limit=1)) == 0
 
 
 def test_test_profile_result_is_saved_to_ranking(

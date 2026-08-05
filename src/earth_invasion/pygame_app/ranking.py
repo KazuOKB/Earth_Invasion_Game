@@ -13,7 +13,10 @@ RANKING_LIMIT = 5
 def default_ranking_path() -> Path:
     """通常起動でランキングを保存する場所を返す。"""
 
-    return Path.home() / ".earth_invasion" / "ranking.json"
+    try:
+        return Path.home() / ".earth_invasion" / "ranking.json"
+    except (OSError, RuntimeError):
+        return Path("ranking.json")
 
 
 @dataclass(slots=True)

@@ -56,7 +56,7 @@ UFOが敵や敵弾に触れると、体力が減ります。
 └─ Rule       → ルール説明 → タイトル
 ```
 
-## 実行方法
+## デスクトップ版
 
 Python 3.13とuvを使います。
 
@@ -146,13 +146,53 @@ BGMと効果音の初期音量は0%です。
 uv run earth-invasion --stage-profile test --check-config
 ```
 
+## ブラウザ版
+
+公開URLは次の場所です。
+
+<https://kazuokb.github.io/Earth_Invasion_Game/>
+
+初回のPages設定やデプロイ中は、まだ表示できないことがあります。
+
+### 開発中の起動
+
+pygbag 0.9.3とWeb用Python 3.13を使います。
+
+```bash
+uv sync
+uv run pygbag --PYBUILD 3.13 --width 750 --height 500 --title "Earth Invasion Game" .
+```
+
+起動後、ブラウザで<http://localhost:8000/>を開きます。
+最初の読込後、画面をクリックするとゲームが始まります。
+
+### リリース用ビルド
+
+```bash
+uv run pygbag --build --PYBUILD 3.13 --width 750 --height 500 --title "Earth Invasion Game" .
+```
+
+成果物は`build/web/`へ作られます。
+`index.html`を直接開かず、HTTPサーバーから配信してください。
+
+`master`へ変更が入ると、GitHub Actionsが同じビルドを実行します。
+リポジトリのPages設定では、公開元に`GitHub Actions`を選びます。
+
+### ブラウザ版の制約
+
+- キーボード操作とゲーム内容はデスクトップ版と同じです。
+- 音を使うには、読込後に画面をクリックする必要があります。
+- 初期音量は0%です。タイトル画面で変更できます。
+- ランキング保存はブラウザを閉じた後まで保証されません。
+- WebAssemblyランタイムはpygbagの公式CDNから読み込みます。
+
 ### 開発用コマンド
 
 ```bash
 uv run pytest
-uv run ruff check src tests scripts
-uv run ruff format --check src tests scripts
-uv run mypy src tests scripts
+uv run ruff check main.py src tests scripts
+uv run ruff format --check main.py src tests scripts
+uv run mypy main.py src tests scripts
 ```
 
 ## ファイル構成
@@ -164,6 +204,8 @@ uv run mypy src tests scripts
 - `tests/`: ゲームルールとPygame側の自動テスト
 - `docs/`: ゲーム仕様、コード設計、進捗
 - `scripts/`: オリジナルBGMの生成スクリプト
+- `main.py`: ブラウザ版の起動ファイル
+- `pygbag.ini`: ブラウザ版へ含めるファイルの設定
 
 ## 現在の実装状況
 
