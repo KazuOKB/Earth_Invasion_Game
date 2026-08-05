@@ -36,6 +36,7 @@ class MusicPlayer:
 
     tracks: dict[MusicTrack, pygame.mixer.Sound]
     channel: pygame.mixer.Channel | None
+    volume: float
     current_track: MusicTrack | None = None
 
     @classmethod
@@ -44,14 +45,16 @@ class MusicPlayer:
 
         _check_volume(volume)
         if pygame.mixer.get_init() is None:
-            return cls(tracks={}, channel=None)
+            return cls(tracks={}, channel=None, volume=volume)
 
         try:
             pygame.mixer.set_reserved(1)
-            tracks = {track: _load_music(MUSIC_FILES[track], volume) for track in MusicTrack}
-            return cls(tracks=tracks, channel=pygame.mixer.Channel(0))
+            tracks = {track: _load_music(MUSIC_FILES[track]) for track in MusicTrack}
+            channel = pygame.mixer.Channel(0)
+            channel.set_volume(volume)
+            return cls(tracks=tracks, channel=channel, volume=volume)
         except (OSError, pygame.error):
-            return cls(tracks={}, channel=None)
+            return cls(tracks={}, channel=None, volume=volume)
 
     def play(self, track: MusicTrack) -> None:
         """指定したBGMが未再生の場合だけループ再生する。"""
@@ -66,6 +69,14 @@ class MusicPlayer:
         self.channel.play(sound, loops=-1, fade_ms=250)
         self.current_track = track
 
+    def set_volume(self, volume: float) -> None:
+        """再生中のBGMへ新しい音量を反映する。"""
+
+        _check_volume(volume)
+        self.volume = volume
+        if self.channel is not None:
+            self.channel.set_volume(volume)
+
 
 def music_track_for(screen: AppScreen, phase: GamePhase) -> MusicTrack:
     """現在の画面とステージに合うBGMを返す。"""
@@ -77,11 +88,9 @@ def music_track_for(screen: AppScreen, phase: GamePhase) -> MusicTrack:
     return MusicTrack.TITLE
 
 
-def _load_music(filename: str, volume: float) -> pygame.mixer.Sound:
+def _load_music(filename: str) -> pygame.mixer.Sound:
     resource = files(ASSET_PACKAGE).joinpath(filename)
-    sound = pygame.mixer.Sound(file=BytesIO(resource.read_bytes()))
-    sound.set_volume(volume)
-    return sound
+    return pygame.mixer.Sound(file=BytesIO(resource.read_bytes()))
 
 
 def _check_volume(volume: float) -> None:

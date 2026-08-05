@@ -9,6 +9,7 @@ import pytest
 
 from earth_invasion.gameplay.commands import PlayerCommand
 from earth_invasion.gameplay.entities import Beam, Chaser, EnemyProjectile, Meteor, Shooter
+from earth_invasion.gameplay.events import PlayerHitSource
 from earth_invasion.gameplay.session import GameSession
 from earth_invasion.gameplay.settings import (
     BossSettings,
@@ -470,6 +471,7 @@ def test_shooter_contact_damages_player_and_removes_shooter() -> None:
     events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
     assert events.player_was_hit
+    assert events.player_hit_source is PlayerHitSource.CONTACT
     assert session.player.health == 2
     assert session.shooters == []
 
@@ -485,8 +487,9 @@ def test_enemy_projectile_damages_player_and_is_removed() -> None:
         )
     )
 
-    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
+    assert events.player_hit_source is PlayerHitSource.ENEMY_PROJECTILE
     assert session.player.health == 2
     assert session.enemy_projectiles == []
 

@@ -48,3 +48,11 @@ def test_unavailable_audio_device_disables_music(monkeypatch: pytest.MonkeyPatch
 
     assert music_player.tracks == {}
     assert music_player.channel is None
+
+
+def test_disabled_music_player_can_update_volume() -> None:
+    music_player = MusicPlayer(tracks={}, channel=None, volume=0.0)
+
+    music_player.set_volume(0.6)
+
+    assert music_player.volume == 0.6

@@ -42,8 +42,8 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
-    assert config.gameplay.audio.music_volume == 0.3
-    assert config.gameplay.audio.sound_effect_volume == 0.55
+    assert config.gameplay.audio.music_volume == 0.0
+    assert config.gameplay.audio.sound_effect_volume == 0.0
     assert config.stage.profile == "normal"
     assert config.stage.invasion_target == 100
     assert config.stage.duration_seconds_for("meteor") == 30.0

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pygame
 import pytest
 
-from earth_invasion.gameplay.events import GameplayEvents
+from earth_invasion.gameplay.events import GameplayEvents, PlayerHitSource
 from earth_invasion.pygame_app.audio import AudioPlayer, SoundEffect, sound_effects_for
 
 
@@ -18,7 +18,7 @@ def test_each_gameplay_event_has_a_sound_effect() -> None:
         beam_fired=True,
         enemies_destroyed=2,
         boss_hit_count=1,
-        player_was_hit=True,
+        player_hit_source=PlayerHitSource.CONTACT,
     )
 
     assert sound_effects_for(events) == (
@@ -27,6 +27,12 @@ def test_each_gameplay_event_has_a_sound_effect() -> None:
         SoundEffect.BOSS_HIT,
         SoundEffect.PLAYER_HIT,
     )
+
+
+def test_enemy_projectile_hit_has_a_distinct_sound() -> None:
+    events = GameplayEvents(player_hit_source=PlayerHitSource.ENEMY_PROJECTILE)
+
+    assert sound_effects_for(events) == (SoundEffect.ENEMY_ATTACK_HIT,)
 
 
 def test_audio_initialization_failure_falls_back_to_silence(
@@ -42,9 +48,18 @@ def test_audio_initialization_failure_falls_back_to_silence(
     audio_player = AudioPlayer.create()
 
     assert audio_player.sounds == {}
+    assert audio_player.volume == 1.0
 
 
 @pytest.mark.parametrize("volume", [-0.1, 1.1])
 def test_invalid_sound_effect_volume_is_rejected(volume: float) -> None:
     with pytest.raises(ValueError, match="volume"):
         AudioPlayer.create(volume)
+
+
+def test_disabled_audio_player_can_update_volume() -> None:
+    audio_player = AudioPlayer(sounds={}, volume=0.0)
+
+    audio_player.set_volume(0.6)
+
+    assert audio_player.volume == 0.6

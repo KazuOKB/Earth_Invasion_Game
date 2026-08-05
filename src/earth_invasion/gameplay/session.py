@@ -19,7 +19,7 @@ from earth_invasion.gameplay.entities import (
     Player,
     Shooter,
 )
-from earth_invasion.gameplay.events import GameplayEvents
+from earth_invasion.gameplay.events import GameplayEvents, PlayerHitSource
 from earth_invasion.gameplay.geometry import rectangles_overlap
 from earth_invasion.gameplay.settings import (
     BossSettings,
@@ -153,9 +153,9 @@ class GameSession:
         enemies_destroyed += self._resolve_beam_shooter_collisions()
         boss_hit_count = self._resolve_beam_boss_collisions()
 
-        player_was_hit = False
+        player_hit_source = None
         if not self.is_game_clear:
-            player_was_hit = self._resolve_player_damage_collisions()
+            player_hit_source = self._resolve_player_damage_collisions()
 
         if not self.is_finished:
             self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
@@ -165,7 +165,7 @@ class GameSession:
             beam_fired=beam_fired,
             enemies_destroyed=enemies_destroyed,
             boss_hit_count=boss_hit_count,
-            player_was_hit=player_was_hit,
+            player_hit_source=player_hit_source,
         )
 
     @property
@@ -578,7 +578,7 @@ class GameSession:
             self.invasion_settings.target,
         )
 
-    def _resolve_player_damage_collisions(self) -> bool:
+    def _resolve_player_damage_collisions(self) -> PlayerHitSource | None:
         meteor_count_before_collision = len(self.meteors)
         chaser_count_before_collision = len(self.chasers)
         shooter_count_before_collision = len(self.shooters)
@@ -599,23 +599,30 @@ class GameSession:
             if not rectangles_overlap(self.player, projectile)
         ]
 
-        hazard_touched_player = (
+        contact_touched_player = (
             len(self.meteors) < meteor_count_before_collision
             or len(self.chasers) < chaser_count_before_collision
             or len(self.shooters) < shooter_count_before_collision
-            or len(self.enemy_projectiles) < projectile_count_before_collision
         )
-        player_was_hit = False
+        projectile_touched_player = len(self.enemy_projectiles) < projectile_count_before_collision
+        player_hit_source = None
+        hazard_touched_player = contact_touched_player or projectile_touched_player
         if hazard_touched_player:
             player_was_hit = self.player.take_damage(
                 damage=1,
                 invincibility_seconds=self.player_settings.invincibility_seconds,
             )
+            if player_was_hit:
+                player_hit_source = (
+                    PlayerHitSource.ENEMY_PROJECTILE
+                    if projectile_touched_player
+                    else PlayerHitSource.CONTACT
+                )
 
         if self.player.is_defeated:
             self.status = GameStatus.GAME_OVER
 
-        return player_was_hit
+        return player_hit_source
 
 
 def _create_player(
