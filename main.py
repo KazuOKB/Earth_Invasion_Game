@@ -1,3 +1,7 @@
+# /// script
+# dependencies = ["pygame-ce"]
+# ///
+
 """pygbagが読み込むブラウザ版のエントリーポイント。"""
 
 from __future__ import annotations

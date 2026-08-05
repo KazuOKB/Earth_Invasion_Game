@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from importlib.resources import files
 from io import BytesIO
@@ -77,6 +78,9 @@ def load_background_image(size: tuple[int, int]) -> pygame.Surface:
 
 def _load_image(filename: str) -> pygame.Surface:
     resource = files(ASSET_PACKAGE).joinpath(filename)
+    if sys.platform == "emscripten":
+        return pygame.image.load(str(resource)).convert_alpha()
+
     image_data = BytesIO(resource.read_bytes())
     return pygame.image.load(image_data, filename).convert_alpha()
 

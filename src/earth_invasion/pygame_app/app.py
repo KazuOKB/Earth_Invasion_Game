@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 
 import pygame
@@ -67,7 +68,8 @@ class PygameApplication:
     async def _run_loop(self, frame_limit: int | None) -> int:
         window = pygame.display.set_mode(self.logical_size, pygame.RESIZABLE)
         pygame.display.set_caption("Earth Invasion Game")
-        pygame.key.stop_text_input()
+        if sys.platform != "emscripten":
+            pygame.key.stop_text_input()
         logical_surface = pygame.Surface(self.logical_size)
         images = load_game_images(self.logical_size)
         session = create_game_session(self.config, images)

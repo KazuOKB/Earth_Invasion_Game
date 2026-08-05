@@ -164,6 +164,7 @@ uv run pygbag --PYBUILD 3.13 --width 750 --height 500 --title "Earth Invasion Ga
 ```
 
 起動後、ブラウザで<http://localhost:8000/>を開きます。
+`127.0.0.1`ではなく、`localhost`を使ってください。
 最初の読込後、画面をクリックするとゲームが始まります。
 
 ### リリース用ビルド

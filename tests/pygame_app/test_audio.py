@@ -51,6 +51,18 @@ def test_audio_initialization_failure_falls_back_to_silence(
     assert audio_player.volume == 1.0
 
 
+def test_zero_volume_skips_audio_initialization(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_if_called(**_options: object) -> None:
+        raise AssertionError("mixer should not be initialized")
+
+    monkeypatch.setattr(pygame.mixer, "init", fail_if_called)
+
+    audio_player = AudioPlayer.create(0.0)
+
+    assert audio_player.sounds == {}
+    assert audio_player.volume == 0.0
+
+
 @pytest.mark.parametrize("volume", [-0.1, 1.1])
 def test_invalid_sound_effect_volume_is_rejected(volume: float) -> None:
     with pytest.raises(ValueError, match="volume"):
