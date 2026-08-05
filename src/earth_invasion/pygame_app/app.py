@@ -19,7 +19,9 @@ from earth_invasion.gameplay.settings import (
 )
 from earth_invasion.gameplay.stage import StageSchedule
 from earth_invasion.pygame_app.assets import GameImages, load_game_images
+from earth_invasion.pygame_app.audio import AudioPlayer
 from earth_invasion.pygame_app.display import Size, calculate_viewport
+from earth_invasion.pygame_app.effects import DamageFlash
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
 from earth_invasion.pygame_app.hud import HUD_HEIGHT, heart_states
 from earth_invasion.pygame_app.input import create_player_command
@@ -54,6 +56,8 @@ EMPTY_HEART_COLOR = (85, 90, 110)
 HEART_SIZE = 20
 HEART_SPACING = 7
 PLAYER_BLINK_INTERVAL_SECONDS = 0.1
+DAMAGE_FLASH_COLOR = (255, 35, 35)
+DAMAGE_FLASH_MAX_ALPHA = 105
 
 
 class PygameApplication:
@@ -81,6 +85,8 @@ class PygameApplication:
             session = self._create_session(images)
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
             screen_flow = ScreenFlow()
+            audio_player = AudioPlayer.create()
+            damage_flash = DamageFlash()
             menu_title_font = pygame.font.Font(None, 72)
             title_font = pygame.font.Font(None, 48)
             text_font = pygame.font.Font(None, 30)
@@ -103,14 +109,24 @@ class PygameApplication:
                             _navigation_key(event.key),
                         )
                         running = running and self._apply_navigation_action(
-                            action, screen_flow, session, fixed_time_step
+                            action,
+                            screen_flow,
+                            session,
+                            fixed_time_step,
+                            damage_flash,
                         )
 
                 if not running:
                     break
 
                 if screen_flow.current is AppScreen.GAMEPLAY:
-                    self._update_gameplay(session, fixed_time_step, elapsed_seconds)
+                    self._update_gameplay(
+                        session,
+                        fixed_time_step,
+                        audio_player,
+                        damage_flash,
+                        elapsed_seconds,
+                    )
                     self._show_gameplay_result(screen_flow, session)
 
                 self._draw_current_screen(
@@ -121,6 +137,7 @@ class PygameApplication:
                     screen_flow,
                     session,
                     images,
+                    damage_flash,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -139,6 +156,7 @@ class PygameApplication:
         screen_flow: ScreenFlow,
         session: GameSession,
         fixed_time_step: FixedTimeStep,
+        damage_flash: DamageFlash,
     ) -> bool:
         if action is NavigationAction.CLOSE:
             return False
@@ -148,6 +166,7 @@ class PygameApplication:
 
         if action is not NavigationAction.NONE:
             fixed_time_step.reset()
+            damage_flash.reset()
             screen_flow.apply(action)
 
         return True
@@ -156,8 +175,11 @@ class PygameApplication:
         self,
         session: GameSession,
         fixed_time_step: FixedTimeStep,
+        audio_player: AudioPlayer,
+        damage_flash: DamageFlash,
         elapsed_seconds: float,
     ) -> None:
+        damage_flash.update(elapsed_seconds)
         keys = pygame.key.get_pressed()
         command = create_player_command(
             up_pressed=keys[pygame.K_UP],
@@ -167,7 +189,10 @@ class PygameApplication:
         update_count = fixed_time_step.consume(elapsed_seconds)
 
         for _ in range(update_count):
-            session.update(command, fixed_time_step.step_seconds)
+            events = session.update(command, fixed_time_step.step_seconds)
+            audio_player.play(events)
+            if events.player_was_hit:
+                damage_flash.trigger()
 
     def _show_gameplay_result(
         self,
@@ -188,6 +213,7 @@ class PygameApplication:
         screen_flow: ScreenFlow,
         session: GameSession,
         images: GameImages,
+        damage_flash: DamageFlash,
     ) -> None:
         match screen_flow.current:
             case AppScreen.TITLE:
@@ -210,6 +236,7 @@ class PygameApplication:
                     text_font,
                     session,
                     images,
+                    damage_flash,
                 )
             case AppScreen.GAME_OVER | AppScreen.GAME_CLEAR:
                 draw_result_screen(
@@ -302,6 +329,7 @@ class PygameApplication:
         text_font: pygame.font.Font,
         session: GameSession,
         images: GameImages,
+        damage_flash: DamageFlash,
     ) -> None:
         surface.blit(images.background, (0, 0))
 
@@ -343,7 +371,22 @@ class PygameApplication:
             )
             pygame.draw.rect(surface, ENEMY_PROJECTILE_COLOR, projectile_rectangle)
 
+        self._draw_damage_flash(surface, damage_flash)
         self._draw_hud(surface, text_font, session)
+
+    def _draw_damage_flash(
+        self,
+        surface: pygame.Surface,
+        damage_flash: DamageFlash,
+    ) -> None:
+        if not damage_flash.is_visible:
+            return
+
+        overlay_size = self.logical_size[0], self.logical_size[1] - HUD_HEIGHT
+        overlay = pygame.Surface(overlay_size, pygame.SRCALPHA)
+        alpha = round(DAMAGE_FLASH_MAX_ALPHA * damage_flash.intensity)
+        overlay.fill((*DAMAGE_FLASH_COLOR, alpha))
+        surface.blit(overlay, (0, HUD_HEIGHT))
 
     def _draw_hud(
         self,

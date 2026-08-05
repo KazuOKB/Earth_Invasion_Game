@@ -19,6 +19,7 @@ from earth_invasion.gameplay.entities import (
     Player,
     Shooter,
 )
+from earth_invasion.gameplay.events import GameplayEvents
 from earth_invasion.gameplay.geometry import rectangles_overlap
 from earth_invasion.gameplay.settings import (
     BossSettings,
@@ -125,18 +126,18 @@ class GameSession:
             shooter_spawn_remaining=shooter_settings.spawn_interval_seconds,
         )
 
-    def update(self, command: PlayerCommand, elapsed_seconds: float) -> None:
-        """プレイヤー、ビーム、敵を固定時間だけ更新する。"""
+    def update(self, command: PlayerCommand, elapsed_seconds: float) -> GameplayEvents:
+        """ゲームを固定時間だけ更新し、今回起きた出来事を返す。"""
 
         _check_positive(elapsed_seconds, "elapsed_seconds")
         if self.status is not GameStatus.PLAYING:
-            return
+            return GameplayEvents()
 
         self._start_boss_battle_if_needed()
         self.player.update_invincibility(elapsed_seconds)
         self._move_player(command, elapsed_seconds)
         self._move_beams(elapsed_seconds)
-        self._update_weapon(command, elapsed_seconds)
+        beam_fired = self._update_weapon(command, elapsed_seconds)
         self._move_meteors(elapsed_seconds)
         self._update_meteor_spawning(elapsed_seconds)
         self._move_chasers(elapsed_seconds)
@@ -147,19 +148,25 @@ class GameSession:
         self._move_enemy_projectiles(elapsed_seconds)
         self._update_shooter_firing(elapsed_seconds)
         self._update_boss_firing(elapsed_seconds)
-        self._resolve_beam_meteor_collisions()
-        self._resolve_beam_chaser_collisions()
-        self._resolve_beam_shooter_collisions()
-        self._resolve_beam_boss_collisions()
-        if self.is_game_clear:
-            return
+        enemies_destroyed = self._resolve_beam_meteor_collisions()
+        enemies_destroyed += self._resolve_beam_chaser_collisions()
+        enemies_destroyed += self._resolve_beam_shooter_collisions()
+        boss_hit_count = self._resolve_beam_boss_collisions()
 
-        self._resolve_player_damage_collisions()
-        if self.is_game_over:
-            return
+        player_was_hit = False
+        if not self.is_game_clear:
+            player_was_hit = self._resolve_player_damage_collisions()
 
-        self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
-        self._start_boss_battle_if_needed()
+        if not self.is_finished:
+            self.stage.update(elapsed_seconds, self.invasion_gauge_is_full)
+            self._start_boss_battle_if_needed()
+
+        return GameplayEvents(
+            beam_fired=beam_fired,
+            enemies_destroyed=enemies_destroyed,
+            boss_hit_count=boss_hit_count,
+            player_was_hit=player_was_hit,
+        )
 
     @property
     def current_phase(self) -> GamePhase:
@@ -235,7 +242,7 @@ class GameSession:
 
         self.beams = [beam for beam in self.beams if beam.x < self.world_width]
 
-    def _update_weapon(self, command: PlayerCommand, elapsed_seconds: float) -> None:
+    def _update_weapon(self, command: PlayerCommand, elapsed_seconds: float) -> bool:
         self.beam_cooldown_remaining = max(
             0.0,
             self.beam_cooldown_remaining - elapsed_seconds,
@@ -244,6 +251,9 @@ class GameSession:
         if command.fire_pressed and self.beam_cooldown_remaining <= TIME_EPSILON:
             self._fire_beam()
             self.beam_cooldown_remaining = self.weapon_settings.beam_cooldown_seconds
+            return True
+
+        return False
 
     def _fire_beam(self) -> None:
         self.beams.append(
@@ -454,7 +464,7 @@ class GameSession:
             and projectile.y < self.world_height
         ]
 
-    def _resolve_beam_meteor_collisions(self) -> None:
+    def _resolve_beam_meteor_collisions(self) -> int:
         remaining_beams: list[Beam] = []
         remaining_meteors = list(self.meteors)
         destroyed_meteor_count = 0
@@ -481,8 +491,9 @@ class GameSession:
 
         gained_points = destroyed_meteor_count * self.invasion_settings.meteor_reward
         self._increase_invasion_gauge(gained_points)
+        return destroyed_meteor_count
 
-    def _resolve_beam_chaser_collisions(self) -> None:
+    def _resolve_beam_chaser_collisions(self) -> int:
         remaining_beams: list[Beam] = []
         remaining_chasers = list(self.chasers)
         destroyed_chaser_count = 0
@@ -509,8 +520,9 @@ class GameSession:
 
         gained_points = destroyed_chaser_count * self.invasion_settings.chaser_reward
         self._increase_invasion_gauge(gained_points)
+        return destroyed_chaser_count
 
-    def _resolve_beam_shooter_collisions(self) -> None:
+    def _resolve_beam_shooter_collisions(self) -> int:
         remaining_beams: list[Beam] = []
         remaining_shooters = list(self.shooters)
         destroyed_shooter_count = 0
@@ -537,10 +549,11 @@ class GameSession:
 
         gained_points = destroyed_shooter_count * self.invasion_settings.shooter_reward
         self._increase_invasion_gauge(gained_points)
+        return destroyed_shooter_count
 
-    def _resolve_beam_boss_collisions(self) -> None:
+    def _resolve_beam_boss_collisions(self) -> int:
         if self.boss is None:
-            return
+            return 0
 
         remaining_beams: list[Beam] = []
         hit_count = 0
@@ -557,13 +570,15 @@ class GameSession:
         if self.boss.is_defeated:
             self.status = GameStatus.GAME_CLEAR
 
+        return hit_count
+
     def _increase_invasion_gauge(self, points: int) -> None:
         self.invasion_gauge = min(
             self.invasion_gauge + points,
             self.invasion_settings.target,
         )
 
-    def _resolve_player_damage_collisions(self) -> None:
+    def _resolve_player_damage_collisions(self) -> bool:
         meteor_count_before_collision = len(self.meteors)
         chaser_count_before_collision = len(self.chasers)
         shooter_count_before_collision = len(self.shooters)
@@ -590,14 +605,17 @@ class GameSession:
             or len(self.shooters) < shooter_count_before_collision
             or len(self.enemy_projectiles) < projectile_count_before_collision
         )
+        player_was_hit = False
         if hazard_touched_player:
-            self.player.take_damage(
+            player_was_hit = self.player.take_damage(
                 damage=1,
                 invincibility_seconds=self.player_settings.invincibility_seconds,
             )
 
         if self.player.is_defeated:
             self.status = GameStatus.GAME_OVER
+
+        return player_was_hit
 
 
 def _create_player(
