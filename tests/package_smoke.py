@@ -14,7 +14,8 @@ assert normal_config.gameplay.invasion_rewards.meteor == 2
 assert normal_config.gameplay.chaser.spawn_interval_seconds == 0.8
 assert normal_config.gameplay.shooter.shot_interval_seconds == 0.8
 assert normal_config.gameplay.boss.max_health == 20
-assert normal_config.gameplay.audio.music_volume == 0.3
+assert normal_config.gameplay.audio.music_volume == 0.0
+assert normal_config.gameplay.audio.sound_effect_volume == 0.0
 assert test_config.stage.duration_seconds_for("meteor") == 2.0
 assert files("earth_invasion.assets").joinpath("ufo003.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("meteo2.png").read_bytes().startswith(b"\x89PNG")

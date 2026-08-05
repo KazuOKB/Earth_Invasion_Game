@@ -38,6 +38,7 @@ from earth_invasion.pygame_app.screens import (
     draw_rules_screen,
     draw_title_screen,
 )
+from earth_invasion.pygame_app.volume import VolumeControl, VolumeKey, VolumeTarget
 
 LETTERBOX_COLOR = (0, 0, 0)
 TEXT_COLOR = (230, 235, 255)
@@ -89,6 +90,10 @@ class PygameApplication:
             audio_config = self.config.gameplay.audio
             audio_player = AudioPlayer.create(audio_config.sound_effect_volume)
             music_player = MusicPlayer.create(audio_config.music_volume)
+            volume_control = VolumeControl(
+                music_volume=audio_config.music_volume,
+                sound_effect_volume=audio_config.sound_effect_volume,
+            )
             damage_flash = DamageFlash()
             menu_title_font = pygame.font.Font(None, 72)
             title_font = pygame.font.Font(None, 48)
@@ -107,6 +112,19 @@ class PygameApplication:
                     elif event.type == pygame.VIDEORESIZE:
                         window = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                     elif event.type == pygame.KEYDOWN:
+                        volume_key = _volume_key(event.key)
+                        if screen_flow.current is AppScreen.TITLE and volume_control.handle(
+                            volume_key
+                        ):
+                            audio_player.set_volume(volume_control.sound_effect_volume)
+                            music_player.set_volume(volume_control.music_volume)
+                            if (
+                                volume_control.selected is VolumeTarget.SOUND_EFFECTS
+                                and volume_key in (VolumeKey.LEFT, VolumeKey.RIGHT)
+                            ):
+                                audio_player.play_preview()
+                            continue
+
                         action = action_for_key(
                             screen_flow.current,
                             _navigation_key(event.key),
@@ -142,6 +160,7 @@ class PygameApplication:
                     session,
                     images,
                     damage_flash,
+                    volume_control,
                 )
                 self._present(window, logical_surface)
                 pygame.display.flip()
@@ -218,6 +237,7 @@ class PygameApplication:
         session: GameSession,
         images: GameImages,
         damage_flash: DamageFlash,
+        volume_control: VolumeControl,
     ) -> None:
         match screen_flow.current:
             case AppScreen.TITLE:
@@ -226,6 +246,7 @@ class PygameApplication:
                     images.background,
                     menu_title_font,
                     text_font,
+                    volume_control,
                 )
             case AppScreen.RULES:
                 draw_rules_screen(
@@ -546,3 +567,15 @@ def _navigation_key(key: int) -> NavigationKey:
     if key == pygame.K_ESCAPE:
         return NavigationKey.ESCAPE
     return NavigationKey.OTHER
+
+
+def _volume_key(key: int) -> VolumeKey:
+    if key == pygame.K_UP:
+        return VolumeKey.UP
+    if key == pygame.K_DOWN:
+        return VolumeKey.DOWN
+    if key == pygame.K_LEFT:
+        return VolumeKey.LEFT
+    if key == pygame.K_RIGHT:
+        return VolumeKey.RIGHT
+    return VolumeKey.OTHER

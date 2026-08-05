@@ -5,6 +5,7 @@ from __future__ import annotations
 import pygame
 
 from earth_invasion.pygame_app.navigation import AppScreen
+from earth_invasion.pygame_app.volume import VolumeControl, VolumeTarget
 
 TEXT_COLOR = (230, 235, 255)
 TITLE_COLOR = (255, 100, 45)
@@ -17,12 +18,13 @@ def draw_title_screen(
     background: pygame.Surface,
     title_font: pygame.font.Font,
     text_font: pygame.font.Font,
+    volume_control: VolumeControl,
 ) -> None:
     """タイトルと選択できる操作を描画する。"""
 
     _draw_menu_background(surface, background)
-    _draw_centered_text(surface, title_font, "EARTH INVASION", 135, TITLE_COLOR)
-    _draw_centered_text(surface, text_font, "Invade Earth and defeat its defenses", 195)
+    _draw_centered_text(surface, title_font, "EARTH INVASION", 60, TITLE_COLOR)
+    _draw_centered_text(surface, text_font, "Invade Earth and defeat its defenses", 110)
     _draw_centered_lines(
         surface,
         text_font,
@@ -31,9 +33,20 @@ def draw_title_screen(
             "R: Rules",
             "Esc: Close",
         ),
-        start_y=285,
-        spacing=42,
+        start_y=160,
+        spacing=34,
     )
+    _draw_centered_text(surface, text_font, "AUDIO", 285, TITLE_COLOR)
+    _draw_volume_row(surface, text_font, volume_control, VolumeTarget.MUSIC, "BGM", 325)
+    _draw_volume_row(
+        surface,
+        text_font,
+        volume_control,
+        VolumeTarget.SOUND_EFFECTS,
+        "Effects",
+        360,
+    )
+    _draw_centered_text(surface, text_font, "Up / Down: Select    Left / Right: Volume", 420)
 
 
 def draw_rules_screen(
@@ -127,3 +140,17 @@ def _draw_centered_text(
     rendered = font.render(text, True, color)
     rectangle = rendered.get_rect(center=(surface.get_width() // 2, center_y))
     surface.blit(rendered, rectangle)
+
+
+def _draw_volume_row(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    volume_control: VolumeControl,
+    target: VolumeTarget,
+    label: str,
+    center_y: int,
+) -> None:
+    prefix = ">" if volume_control.selected is target else " "
+    percentage = volume_control.percentage_for(target)
+    color = TITLE_COLOR if volume_control.selected is target else TEXT_COLOR
+    _draw_centered_text(surface, font, f"{prefix} {label}: {percentage}%", center_y, color)
