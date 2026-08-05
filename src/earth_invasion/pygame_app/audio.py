@@ -30,21 +30,23 @@ class AudioPlayer:
     sounds: dict[SoundEffect, pygame.mixer.Sound]
 
     @classmethod
-    def create(cls) -> AudioPlayer:
+    def create(cls, volume: float = 1.0) -> AudioPlayer:
         """音声を初期化する。失敗した場合は無音で動作する。"""
 
+        _check_volume(volume)
         try:
             if pygame.mixer.get_init() is None:
                 pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=1, buffer=512)
 
-            return cls(
-                sounds={
-                    SoundEffect.BEAM: _create_tone(760.0, 0.07, 0.16),
-                    SoundEffect.ENEMY_DESTROYED: _create_tone(180.0, 0.12, 0.25),
-                    SoundEffect.BOSS_HIT: _create_tone(300.0, 0.08, 0.20),
-                    SoundEffect.PLAYER_HIT: _create_tone(95.0, 0.18, 0.30),
-                }
-            )
+            sounds = {
+                SoundEffect.BEAM: _create_tone(760.0, 0.07, 0.16),
+                SoundEffect.ENEMY_DESTROYED: _create_tone(180.0, 0.12, 0.25),
+                SoundEffect.BOSS_HIT: _create_tone(300.0, 0.08, 0.20),
+                SoundEffect.PLAYER_HIT: _create_tone(95.0, 0.18, 0.30),
+            }
+            for sound in sounds.values():
+                sound.set_volume(volume)
+            return cls(sounds=sounds)
         except pygame.error:
             return cls(sounds={})
 
@@ -90,3 +92,8 @@ def _create_tone(
         samples.append(round(32_767 * volume * fade * wave))
 
     return pygame.mixer.Sound(buffer=samples)
+
+
+def _check_volume(volume: float) -> None:
+    if volume < 0.0 or volume > 1.0:
+        raise ValueError("volumeは0以上1以下にしてください")

@@ -25,6 +25,7 @@ from earth_invasion.pygame_app.effects import DamageFlash
 from earth_invasion.pygame_app.fixed_step import FixedTimeStep
 from earth_invasion.pygame_app.hud import HUD_HEIGHT, heart_states
 from earth_invasion.pygame_app.input import create_player_command
+from earth_invasion.pygame_app.music import MusicPlayer, music_track_for
 from earth_invasion.pygame_app.navigation import (
     AppScreen,
     NavigationAction,
@@ -85,7 +86,9 @@ class PygameApplication:
             session = self._create_session(images)
             fixed_time_step = FixedTimeStep(self.config.gameplay.updates_per_second)
             screen_flow = ScreenFlow()
-            audio_player = AudioPlayer.create()
+            audio_config = self.config.gameplay.audio
+            audio_player = AudioPlayer.create(audio_config.sound_effect_volume)
+            music_player = MusicPlayer.create(audio_config.music_volume)
             damage_flash = DamageFlash()
             menu_title_font = pygame.font.Font(None, 72)
             title_font = pygame.font.Font(None, 48)
@@ -129,6 +132,7 @@ class PygameApplication:
                     )
                     self._show_gameplay_result(screen_flow, session)
 
+                music_player.play(music_track_for(screen_flow.current, session.current_phase))
                 self._draw_current_screen(
                     logical_surface,
                     menu_title_font,

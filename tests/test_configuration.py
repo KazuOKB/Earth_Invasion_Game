@@ -42,6 +42,8 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
+    assert config.gameplay.audio.music_volume == 0.3
+    assert config.gameplay.audio.sound_effect_volume == 0.55
     assert config.stage.profile == "normal"
     assert config.stage.invasion_target == 100
     assert config.stage.duration_seconds_for("meteor") == 30.0
@@ -163,6 +165,46 @@ def test_non_positive_boss_health_is_rejected(tmp_path: Path) -> None:
         load_gameplay_config(path)
 
 
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("music_volume", -0.1),
+        ("music_volume", 1.1),
+        ("sound_effect_volume", -0.1),
+        ("sound_effect_volume", 1.1),
+    ],
+)
+def test_audio_volume_must_be_between_zero_and_one(
+    tmp_path: Path,
+    key: str,
+    value: float,
+) -> None:
+    path = tmp_path / "gameplay.json"
+    data = _gameplay_config_data()
+    audio = data["audio"]
+    assert isinstance(audio, dict)
+    audio[key] = value
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=key):
+        load_gameplay_config(path)
+
+
+def test_audio_volume_can_be_zero_to_mute_sound(tmp_path: Path) -> None:
+    path = tmp_path / "gameplay.json"
+    data = _gameplay_config_data()
+    audio = data["audio"]
+    assert isinstance(audio, dict)
+    audio["music_volume"] = 0
+    audio["sound_effect_volume"] = 0
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    config = load_gameplay_config(path)
+
+    assert config.audio.music_volume == 0.0
+    assert config.audio.sound_effect_volume == 0.0
+
+
 def test_non_positive_duration_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "stage.json"
     _write_stage_config(path, meteor_duration=0)
@@ -267,4 +309,5 @@ def _gameplay_config_data() -> dict[str, object]:
             "projectile_speed_pixels_per_second": 360.0,
         },
         "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
+        "audio": {"music_volume": 0.3, "sound_effect_volume": 0.55},
     }

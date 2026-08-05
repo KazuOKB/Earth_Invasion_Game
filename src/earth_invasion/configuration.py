@@ -94,6 +94,14 @@ class InvasionRewards:
 
 
 @dataclass(frozen=True, slots=True)
+class AudioConfig:
+    """BGMと効果音の音量設定。"""
+
+    music_volume: float
+    sound_effect_volume: float
+
+
+@dataclass(frozen=True, slots=True)
 class GameplayConfig:
     """通常用とテスト用で共通するゲーム設定。"""
 
@@ -106,6 +114,7 @@ class GameplayConfig:
     shooter: ShooterConfig
     boss: BossConfig
     invasion_rewards: InvasionRewards
+    audio: AudioConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,6 +185,7 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     shooter = _required_object(data, "shooter", "gameplay")
     boss = _required_object(data, "boss", "gameplay")
     rewards = _required_object(data, "invasion_rewards", "gameplay")
+    audio = _required_object(data, "audio", "gameplay")
 
     meteor_config = _parse_meteor_config(meteor)
 
@@ -272,6 +282,10 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
             meteor=_positive_int(rewards, "meteor", "invasion_rewards"),
             chaser=_positive_int(rewards, "chaser", "invasion_rewards"),
             shooter=_positive_int(rewards, "shooter", "invasion_rewards"),
+        ),
+        audio=AudioConfig(
+            music_volume=_volume(audio, "music_volume"),
+            sound_effect_volume=_volume(audio, "sound_effect_volume"),
         ),
     )
 
@@ -409,6 +423,15 @@ def _positive_number(data: JsonObject, key: str, location: str) -> float:
 def _positive_number_value(value: object, location: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
         raise ConfigError(f"{location}は0より大きい数値にしてください")
+    return float(value)
+
+
+def _volume(data: JsonObject, key: str) -> float:
+    value = _required_value(data, key, "audio")
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ConfigError(f"audio.{key}は0以上1以下の数値にしてください")
+    if value < 0 or value > 1:
+        raise ConfigError(f"audio.{key}は0以上1以下の数値にしてください")
     return float(value)
 
 

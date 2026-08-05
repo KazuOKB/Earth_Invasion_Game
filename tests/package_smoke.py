@@ -14,6 +14,7 @@ assert normal_config.gameplay.invasion_rewards.meteor == 2
 assert normal_config.gameplay.chaser.spawn_interval_seconds == 0.8
 assert normal_config.gameplay.shooter.shot_interval_seconds == 0.8
 assert normal_config.gameplay.boss.max_health == 20
+assert normal_config.gameplay.audio.music_volume == 0.3
 assert test_config.stage.duration_seconds_for("meteor") == 2.0
 assert files("earth_invasion.assets").joinpath("ufo003.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("meteo2.png").read_bytes().startswith(b"\x89PNG")
@@ -21,5 +22,23 @@ assert files("earth_invasion.assets").joinpath("chaser.png").read_bytes().starts
 assert files("earth_invasion.assets").joinpath("shooter.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("boss.png").read_bytes().startswith(b"\x89PNG")
 assert files("earth_invasion.assets").joinpath("background.png").read_bytes().startswith(b"\x89PNG")
+assert (
+    files("earth_invasion.assets")
+    .joinpath("music/bright_title.wav")
+    .read_bytes()
+    .startswith(b"RIFF")
+)
+assert (
+    files("earth_invasion.assets")
+    .joinpath("music/cheerful_invasion.wav")
+    .read_bytes()
+    .startswith(b"RIFF")
+)
+assert (
+    files("earth_invasion.assets")
+    .joinpath("music/defense_boss.wav")
+    .read_bytes()
+    .startswith(b"RIFF")
+)
 
-print("配布パッケージから標準設定とゲーム画像を読み込めました")
+print("配布パッケージから標準設定、画像、BGMを読み込めました")

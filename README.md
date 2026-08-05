@@ -121,6 +121,8 @@ UFOが隕石、追尾敵、攻撃敵、敵弾に触れると、体力が1減り�
 画面上部100ピクセルはHUD専用領域です。
 敵や弾はHUDへ入らず、宇宙背景の上に描画されます。
 ビーム発射、敵破壊、ボスへの命中、被弾には短い効果音があります。
+タイトル、通常戦、ボス戦では、それぞれ明るいチップチューンBGMが流れます。
+BGMと効果音の音量は`gameplay.json`から変更できます。
 音声デバイスを初期化できない環境では、無音のままゲームを続けます。
 ウィンドウを変更しても、内部画面は750×500のままです。
 
@@ -134,9 +136,9 @@ uv run earth-invasion --stage-profile test --check-config
 
 ```bash
 uv run pytest
-uv run ruff check src tests
-uv run ruff format --check src tests
-uv run mypy src tests
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
+uv run mypy src tests scripts
 ```
 
 ## ファイル構成

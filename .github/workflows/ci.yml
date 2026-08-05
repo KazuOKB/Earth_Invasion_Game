@@ -33,13 +33,13 @@ jobs:
         run: uv run pytest
 
       - name: Run Ruff
-        run: uv run ruff check src tests
+        run: uv run ruff check src tests scripts
 
       - name: Check formatting
-        run: uv run ruff format --check src tests
+        run: uv run ruff format --check src tests scripts
 
       - name: Run Mypy
-        run: uv run mypy src tests
+        run: uv run mypy src tests scripts
 
       - name: Check lock file
         run: uv lock --check

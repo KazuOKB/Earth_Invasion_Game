@@ -42,3 +42,9 @@ def test_audio_initialization_failure_falls_back_to_silence(
     audio_player = AudioPlayer.create()
 
     assert audio_player.sounds == {}
+
+
+@pytest.mark.parametrize("volume", [-0.1, 1.1])
+def test_invalid_sound_effect_volume_is_rejected(volume: float) -> None:
+    with pytest.raises(ValueError, match="volume"):
+        AudioPlayer.create(volume)
