@@ -10,6 +10,7 @@ import pygame
 
 ASSET_PACKAGE = "earth_invasion.assets"
 SHOOTER_IMAGE_SIZE = (60, 40)
+SHOOTER_TINT = (180, 75, 255)
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,9 +57,10 @@ def load_chaser_image() -> pygame.Surface:
 
 
 def load_shooter_image() -> pygame.Surface:
-    """攻撃敵のUFO画像を読み込み、ゲーム用の大きさへ縮小する。"""
+    """攻撃敵のUFO画像を縮小し、プレイヤーと異なる紫色へ変える。"""
 
-    return pygame.transform.smoothscale(_load_image("shooter.png"), SHOOTER_IMAGE_SIZE)
+    image = pygame.transform.smoothscale(_load_image("shooter.png"), SHOOTER_IMAGE_SIZE)
+    return _tint_image(image, SHOOTER_TINT)
 
 
 def load_boss_image() -> pygame.Surface:
@@ -77,3 +79,14 @@ def _load_image(filename: str) -> pygame.Surface:
     resource = files(ASSET_PACKAGE).joinpath(filename)
     image_data = BytesIO(resource.read_bytes())
     return pygame.image.load(image_data, filename).convert_alpha()
+
+
+def _tint_image(
+    image: pygame.Surface,
+    color: tuple[int, int, int],
+) -> pygame.Surface:
+    tinted = image.copy()
+    overlay = pygame.Surface(image.get_size(), pygame.SRCALPHA)
+    overlay.fill((*color, 255))
+    tinted.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return tinted

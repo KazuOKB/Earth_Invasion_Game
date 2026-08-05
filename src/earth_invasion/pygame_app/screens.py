@@ -62,17 +62,19 @@ def draw_rules_screen(
 
     _draw_menu_background(surface, background)
     _draw_centered_text(surface, title_font, "RULES", 65, TITLE_COLOR)
-    _draw_centered_lines(
+    _draw_rule_rows(
         surface,
         text_font,
         (
-            "Up / Down: Move the UFO",
-            "Z: Fire the beam",
-            "Destroy enemies to fill the invasion gauge",
-            "Avoid enemies and red projectiles",
-            "Defeat the Earth Defense Boss to clear the game",
-            "Enter / Esc: Return to Title",
+            ("MOVE", "Up / Down: Move the UFO"),
+            ("ATTACK", "Z: Fire the beam"),
+            ("GAUGE", "Destroy enemies to fill the invasion gauge"),
+            ("DAMAGE", "Avoid enemies and red projectiles"),
+            ("GOAL", "Defeat the Earth Defense Boss"),
+            ("RETURN", "Enter / Esc: Return to Title"),
         ),
+        label_x=120,
+        description_x=230,
         start_y=135,
         spacing=48,
     )
@@ -137,6 +139,27 @@ def _draw_centered_lines(
 ) -> None:
     for index, line in enumerate(lines):
         _draw_centered_text(surface, font, line, start_y + index * spacing)
+
+
+def _draw_rule_rows(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    rows: tuple[tuple[str, str], ...],
+    *,
+    label_x: int,
+    description_x: int,
+    start_y: int,
+    spacing: int,
+) -> None:
+    for index, (label, description) in enumerate(rows):
+        center_y = start_y + index * spacing
+        label_text = font.render(label, True, TITLE_COLOR)
+        description_text = font.render(description, True, TEXT_COLOR)
+        surface.blit(label_text, label_text.get_rect(midleft=(label_x, center_y)))
+        surface.blit(
+            description_text,
+            description_text.get_rect(midleft=(description_x, center_y)),
+        )
 
 
 def _draw_lines_at_x(

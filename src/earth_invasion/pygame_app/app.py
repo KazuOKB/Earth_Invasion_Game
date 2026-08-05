@@ -108,7 +108,7 @@ class PygameApplication:
                     damage_flash,
                     elapsed_seconds,
                 )
-                if session.is_finished and self.config.stage.profile == "normal":
+                if session.is_finished:
                     ranking.record(session.score)
                 screen_flow.show_gameplay_result(session.status)
 
