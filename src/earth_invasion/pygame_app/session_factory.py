@@ -12,6 +12,7 @@ from earth_invasion.gameplay.settings import (
     InvasionSettings,
     MeteorSettings,
     PlayerSettings,
+    ScoreSettings,
     ShooterSettings,
     WeaponSettings,
 )
@@ -86,6 +87,13 @@ def create_game_session(
             meteor_reward=gameplay.invasion_rewards.meteor,
             chaser_reward=gameplay.invasion_rewards.chaser,
             shooter_reward=gameplay.invasion_rewards.shooter,
+        ),
+        score_settings=ScoreSettings(
+            meteor_reward=gameplay.score_rewards.meteor,
+            chaser_reward=gameplay.score_rewards.chaser,
+            shooter_reward=gameplay.score_rewards.shooter,
+            boss_hit_reward=gameplay.score_rewards.boss_hit,
+            clear_bonus=gameplay.score_rewards.clear_bonus,
         ),
         stage_schedule=StageSchedule(
             meteor_duration_seconds=stage.duration_seconds_for("meteor"),

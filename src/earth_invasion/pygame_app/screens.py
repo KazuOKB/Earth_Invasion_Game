@@ -19,13 +19,14 @@ def draw_title_screen(
     title_font: pygame.font.Font,
     text_font: pygame.font.Font,
     volume_control: VolumeControl,
+    ranking_scores: tuple[int, ...],
 ) -> None:
     """タイトルと選択できる操作を描画する。"""
 
     _draw_menu_background(surface, background)
     _draw_centered_text(surface, title_font, "EARTH INVASION", 60, TITLE_COLOR)
     _draw_centered_text(surface, text_font, "Invade Earth and defeat its defenses", 110)
-    _draw_centered_lines(
+    _draw_lines_at_x(
         surface,
         text_font,
         (
@@ -33,18 +34,20 @@ def draw_title_screen(
             "R: Rules",
             "Esc: Close",
         ),
+        center_x=190,
         start_y=160,
         spacing=34,
     )
-    _draw_centered_text(surface, text_font, "AUDIO", 285, TITLE_COLOR)
-    _draw_volume_row(surface, text_font, volume_control, VolumeTarget.MUSIC, "BGM", 325)
+    _draw_ranking(surface, text_font, ranking_scores, center_x=555, start_y=145)
+    _draw_centered_text(surface, text_font, "AUDIO", 300, TITLE_COLOR)
+    _draw_volume_row(surface, text_font, volume_control, VolumeTarget.MUSIC, "BGM", 335)
     _draw_volume_row(
         surface,
         text_font,
         volume_control,
         VolumeTarget.SOUND_EFFECTS,
         "Effects",
-        360,
+        370,
     )
     _draw_centered_text(surface, text_font, "Up / Down: Select    Left / Right: Volume", 420)
 
@@ -81,6 +84,8 @@ def draw_result_screen(
     title_font: pygame.font.Font,
     text_font: pygame.font.Font,
     screen: AppScreen,
+    score: int,
+    ranking_scores: tuple[int, ...],
 ) -> None:
     """ゲームクリアまたはゲームオーバーの結果を描画する。"""
 
@@ -97,8 +102,12 @@ def draw_result_screen(
         subtitle = "The invasion fleet was destroyed"
         color = GAME_OVER_COLOR
 
-    _draw_centered_text(surface, title_font, title, 155, color)
-    _draw_centered_text(surface, text_font, subtitle, 215)
+    _draw_centered_text(surface, title_font, title, 85, color)
+    _draw_centered_text(surface, text_font, subtitle, 135)
+    _draw_centered_text(surface, title_font, f"SCORE: {score}", 190)
+    _draw_ranking(
+        surface, text_font, ranking_scores, center_x=surface.get_width() // 2, start_y=230
+    )
     _draw_centered_lines(
         surface,
         text_font,
@@ -106,8 +115,8 @@ def draw_result_screen(
             "R: Retry",
             "Enter / Esc: Return to Title",
         ),
-        start_y=305,
-        spacing=48,
+        start_y=415,
+        spacing=36,
     )
 
 
@@ -130,6 +139,39 @@ def _draw_centered_lines(
         _draw_centered_text(surface, font, line, start_y + index * spacing)
 
 
+def _draw_lines_at_x(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    lines: tuple[str, ...],
+    *,
+    center_x: int,
+    start_y: int,
+    spacing: int,
+) -> None:
+    for index, line in enumerate(lines):
+        _draw_text_at_x(surface, font, line, center_x, start_y + index * spacing)
+
+
+def _draw_ranking(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    scores: tuple[int, ...],
+    *,
+    center_x: int,
+    start_y: int,
+) -> None:
+    _draw_text_at_x(surface, font, "TOP 5", center_x, start_y, TITLE_COLOR)
+    for index in range(5):
+        score_text = "---" if index >= len(scores) else str(scores[index])
+        _draw_text_at_x(
+            surface,
+            font,
+            f"{index + 1}. {score_text}",
+            center_x,
+            start_y + 30 + index * 25,
+        )
+
+
 def _draw_centered_text(
     surface: pygame.Surface,
     font: pygame.font.Font,
@@ -140,6 +182,18 @@ def _draw_centered_text(
     rendered = font.render(text, True, color)
     rectangle = rendered.get_rect(center=(surface.get_width() // 2, center_y))
     surface.blit(rendered, rectangle)
+
+
+def _draw_text_at_x(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    text: str,
+    center_x: int,
+    center_y: int,
+    color: tuple[int, int, int] = TEXT_COLOR,
+) -> None:
+    rendered = font.render(text, True, color)
+    surface.blit(rendered, rendered.get_rect(center=(center_x, center_y)))
 
 
 def _draw_volume_row(

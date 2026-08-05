@@ -40,6 +40,13 @@
     "chaser": 5,
     "shooter": 10
   },
+  "score_rewards": {
+    "meteor": 100,
+    "chaser": 300,
+    "shooter": 500,
+    "boss_hit": 100,
+    "clear_bonus": 2000
+  },
   "audio": {
     "music_volume": 0.0,
     "sound_effect_volume": 0.0

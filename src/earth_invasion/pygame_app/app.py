@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pygame
 
 from earth_invasion.configuration import ApplicationConfig
@@ -21,6 +23,7 @@ from earth_invasion.pygame_app.navigation import (
     ScreenFlow,
     action_for_key,
 )
+from earth_invasion.pygame_app.ranking import ScoreRanking
 from earth_invasion.pygame_app.screens import (
     draw_result_screen,
     draw_rules_screen,
@@ -35,8 +38,9 @@ LETTERBOX_COLOR = (0, 0, 0)
 class PygameApplication:
     """ウィンドウ、イベント、更新、画面切り替えを管理する。"""
 
-    def __init__(self, config: ApplicationConfig) -> None:
+    def __init__(self, config: ApplicationConfig, ranking_path: Path | None = None) -> None:
         self.config = config
+        self.ranking_path = ranking_path
         resolution = config.gameplay.logical_resolution
         self.logical_size: Size = (resolution.width, resolution.height)
 
@@ -57,6 +61,7 @@ class PygameApplication:
     def _run_loop(self, frame_limit: int | None) -> int:
         window = pygame.display.set_mode(self.logical_size, pygame.RESIZABLE)
         pygame.display.set_caption("Earth Invasion Game")
+        pygame.key.stop_text_input()
         logical_surface = pygame.Surface(self.logical_size)
         images = load_game_images(self.logical_size)
         session = create_game_session(self.config, images)
@@ -71,6 +76,7 @@ class PygameApplication:
             sound_effect_volume=audio_config.sound_effect_volume,
         )
         damage_flash = DamageFlash()
+        ranking = ScoreRanking.load(self.ranking_path)
         menu_title_font = pygame.font.Font(None, 72)
         title_font = pygame.font.Font(None, 48)
         text_font = pygame.font.Font(None, 30)
@@ -102,6 +108,8 @@ class PygameApplication:
                     damage_flash,
                     elapsed_seconds,
                 )
+                if session.is_finished and self.config.stage.profile == "normal":
+                    ranking.record(session.score)
                 screen_flow.show_gameplay_result(session.status)
 
             music_player.play(music_track_for(screen_flow.current, session.current_phase))
@@ -116,6 +124,7 @@ class PygameApplication:
                 renderer,
                 damage_flash,
                 volume_control,
+                ranking,
             )
             self._present(window, logical_surface)
             pygame.display.flip()
@@ -245,6 +254,7 @@ class PygameApplication:
         renderer: GameplayRenderer,
         damage_flash: DamageFlash,
         volume_control: VolumeControl,
+        ranking: ScoreRanking,
     ) -> None:
         match screen_flow.current:
             case AppScreen.TITLE:
@@ -254,6 +264,7 @@ class PygameApplication:
                     menu_title_font,
                     text_font,
                     volume_control,
+                    ranking.scores,
                 )
             case AppScreen.RULES:
                 draw_rules_screen(surface, images.background, title_font, text_font)
@@ -266,6 +277,8 @@ class PygameApplication:
                     title_font,
                     text_font,
                     screen_flow.current,
+                    session.score,
+                    ranking.scores,
                 )
 
     def _present(

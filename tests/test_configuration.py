@@ -42,6 +42,11 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
+    assert config.gameplay.score_rewards.meteor == 100
+    assert config.gameplay.score_rewards.chaser == 300
+    assert config.gameplay.score_rewards.shooter == 500
+    assert config.gameplay.score_rewards.boss_hit == 100
+    assert config.gameplay.score_rewards.clear_bonus == 2000
     assert config.gameplay.audio.music_volume == 0.0
     assert config.gameplay.audio.sound_effect_volume == 0.0
     assert config.stage.profile == "normal"
@@ -309,5 +314,12 @@ def _gameplay_config_data() -> dict[str, object]:
             "projectile_speed_pixels_per_second": 360.0,
         },
         "invasion_rewards": {"meteor": 2, "chaser": 5, "shooter": 10},
+        "score_rewards": {
+            "meteor": 100,
+            "chaser": 300,
+            "shooter": 500,
+            "boss_hit": 100,
+            "clear_bonus": 2000,
+        },
         "audio": {"music_volume": 0.3, "sound_effect_volume": 0.55},
     }

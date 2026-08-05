@@ -23,6 +23,7 @@ def test_session_uses_config_and_image_sizes() -> None:
     assert (session.meteor_settings.width, session.meteor_settings.height) == (30, 28)
     assert session.stage.schedule.meteor_duration_seconds == 20.0
     assert session.invasion_settings.target == 100
+    assert session.score_settings.clear_bonus == 2000
     assert session.boss_settings.max_health == 12
     assert session.random_source is random_source
 
