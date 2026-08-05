@@ -88,6 +88,11 @@ Python 3.13、Pygame、uvを使います。
 - [x] プレイヤー被弾の効果音
 - [x] 被弾時の赤い画面フラッシュ
 - [x] 音声デバイスを使えない環境での無音動作
+- [x] 明るいチップチューンBGMを3曲生成
+- [x] タイトル、通常戦、ボス戦のBGM切り替え
+- [x] BGMのループ再生
+- [x] BGMと効果音の音量設定
+- [x] BGM生成スクリプト
 
 ## 5. 現在の遊び方
 
@@ -120,15 +125,13 @@ uv run earth-invasion --stage-profile test
 
 ## 6. 現在の制限
 
-- BGMはありません
 - スコアとハイスコアはありません
 - 古い実装は比較用として残っています
 
 ## 7. 今後の計画
 
-### 次: BGMとゲームバランス
+### 次: ゲームバランス
 
-- タイトルとゲーム中のBGMを検討する
 - 通常設定で最後まで試遊する
 - 敵の出現間隔、速度、侵略ゲージを調整する
 
@@ -139,15 +142,15 @@ uv run earth-invasion --stage-profile test
 
 ## 8. 品質確認
 
-現在の自動テストは140件です。
+現在の自動テストは158件です。
 
 ローカルでは次を実行します。
 
 ```bash
 uv run pytest
-uv run ruff check src tests
-uv run ruff format --check src tests
-uv run mypy src tests
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
+uv run mypy src tests scripts
 uv lock --check
 uv build
 ```

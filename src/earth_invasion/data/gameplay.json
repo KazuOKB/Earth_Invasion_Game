@@ -39,5 +39,9 @@
     "meteor": 2,
     "chaser": 5,
     "shooter": 10
+  },
+  "audio": {
+    "music_volume": 0.3,
+    "sound_effect_volume": 0.55
   }
 }

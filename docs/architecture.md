@@ -41,9 +41,8 @@ Earth_Invasion_Game/
 ├── docs/
 │   ├── game-design.md
 │   └── architecture.md
-├── assets/
-│   ├── images/
-│   └── sounds/
+├── scripts/
+│   └── generate_music.py
 ├── src/
 │   └── earth_invasion/
 │       ├── __init__.py
@@ -54,6 +53,10 @@ Earth_Invasion_Game/
 │       │   ├── boss.png
 │       │   ├── chaser.png
 │       │   ├── meteo2.png
+│       │   ├── music/
+│       │   │   ├── bright_title.wav
+│       │   │   ├── cheerful_invasion.wav
+│       │   │   └── defense_boss.wav
 │       │   ├── shooter.png
 │       │   └── ufo003.png
 │       ├── data/
@@ -78,6 +81,7 @@ Earth_Invasion_Game/
 │           ├── fixed_step.py
 │           ├── hud.py
 │           ├── input.py
+│           ├── music.py
 │           ├── navigation.py
 │           └── screens.py
 └── tests/
@@ -146,6 +150,14 @@ Pygameの画像や音声は扱いません。
 `audio.py`は、ゲームの出来事を短い効果音へ変換します。
 音声ファイルは使わず、起動時に単純な電子音を作ります。
 音声デバイスを使えない場合は無音で動作します。
+
+`music.py`は、タイトル、通常戦、ボス戦のBGMを切り替えます。
+BGMは専用チャンネルでループ再生します。
+効果音とは別のチャンネルを使います。
+
+`scripts/generate_music.py`は、3曲のオリジナルBGMをWAV形式で生成します。
+曲のテンポ、メロディー、ベース、簡単なドラムをPythonコードで管理します。
+外部の音楽素材には依存しません。
 
 `effects.py`は、被弾フラッシュの残り時間を管理します。
 描画はPygameアプリケーションが行います。
@@ -309,6 +321,7 @@ uv run earth-invasion --stage-profile test --check-config
 - 攻撃敵の射撃間隔と敵弾の速度
 - ボスの最大体力、上下移動速度、射撃間隔、敵弾速度
 - 敵を倒したときの侵略ゲージ増加量
+- BGMと効果音の音量
 
 ## 11. 画面の拡大
 
