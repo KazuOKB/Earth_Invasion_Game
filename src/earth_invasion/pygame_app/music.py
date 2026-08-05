@@ -24,9 +24,9 @@ class MusicTrack(Enum):
 
 
 MUSIC_FILES = {
-    MusicTrack.TITLE: "music/bright_title.wav",
-    MusicTrack.INVASION: "music/cheerful_invasion.wav",
-    MusicTrack.BOSS: "music/defense_boss.wav",
+    MusicTrack.TITLE: "music/bright_title.ogg",
+    MusicTrack.INVASION: "music/cheerful_invasion.ogg",
+    MusicTrack.BOSS: "music/defense_boss.ogg",
 }
 
 

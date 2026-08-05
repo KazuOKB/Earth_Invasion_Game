@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pygame
@@ -45,7 +46,12 @@ class PygameApplication:
         self.logical_size: Size = (resolution.width, resolution.height)
 
     def run(self, frame_limit: int | None = None) -> int:
-        """アプリケーションを実行する。"""
+        """デスクトップ版としてアプリケーションを実行する。"""
+
+        return asyncio.run(self.run_async(frame_limit))
+
+    async def run_async(self, frame_limit: int | None = None) -> int:
+        """ブラウザへ処理を返しながらアプリケーションを実行する。"""
 
         if frame_limit is not None and frame_limit <= 0:
             raise ValueError("frame_limitは0より大きくしてください")
@@ -54,11 +60,11 @@ class PygameApplication:
         pygame.font.init()
 
         try:
-            return self._run_loop(frame_limit)
+            return await self._run_loop(frame_limit)
         finally:
             pygame.quit()
 
-    def _run_loop(self, frame_limit: int | None) -> int:
+    async def _run_loop(self, frame_limit: int | None) -> int:
         window = pygame.display.set_mode(self.logical_size, pygame.RESIZABLE)
         pygame.display.set_caption("Earth Invasion Game")
         pygame.key.stop_text_input()
@@ -132,6 +138,8 @@ class PygameApplication:
             frame_count += 1
             if frame_limit is not None and frame_count >= frame_limit:
                 running = False
+
+            await asyncio.sleep(0)
 
         return 0
 

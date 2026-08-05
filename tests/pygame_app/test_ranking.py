@@ -8,13 +8,24 @@ from typing import cast
 
 import pytest
 
-from earth_invasion.pygame_app.ranking import ScoreRanking
+from earth_invasion.pygame_app.ranking import ScoreRanking, default_ranking_path
 
 
 def test_missing_ranking_starts_empty(tmp_path: Path) -> None:
     ranking = ScoreRanking.load(tmp_path / "ranking.json")
 
     assert ranking.scores == ()
+
+
+def test_unavailable_home_directory_uses_relative_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def raise_error() -> Path:
+        raise RuntimeError("home directory is unavailable")
+
+    monkeypatch.setattr(Path, "home", raise_error)
+
+    assert default_ranking_path() == Path("ranking.json")
 
 
 def test_only_top_five_scores_are_saved_in_descending_order(tmp_path: Path) -> None:
@@ -63,6 +74,16 @@ def test_broken_json_starts_empty(tmp_path: Path) -> None:
     path.write_text("not json", encoding="utf-8")
 
     assert ScoreRanking.load(path).scores == ()
+
+
+def test_save_error_keeps_game_running(tmp_path: Path) -> None:
+    unavailable_directory = tmp_path / "not-a-directory"
+    unavailable_directory.write_text("file", encoding="utf-8")
+    ranking = ScoreRanking(path=unavailable_directory / "ranking.json")
+
+    ranking.record(100)
+
+    assert ranking.scores == (100,)
 
 
 @pytest.mark.parametrize("score", [-1, 1.5, True])
