@@ -77,8 +77,9 @@ def test_invalid_vertical_direction_is_rejected() -> None:
 def test_beam_is_fired_from_player_center() -> None:
     session = _create_session()
 
-    session.update(PlayerCommand(fire_pressed=True), elapsed_seconds=0.1)
+    events = session.update(PlayerCommand(fire_pressed=True), elapsed_seconds=0.1)
 
+    assert events.beam_fired
     assert len(session.beams) == 1
     assert session.beams[0].x == 157.0
     assert session.beams[0].y == 247.0
@@ -175,8 +176,9 @@ def test_beam_destroys_meteor_and_increases_invasion_gauge() -> None:
     session.beams.append(Beam(x=300.0, y=200.0))
     session.meteors.append(_create_meteor(x=310.0, y=190.0))
 
-    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
+    assert events.enemies_destroyed == 1
     assert session.beams == []
     assert session.meteors == []
     assert session.invasion_gauge == 2
@@ -204,8 +206,9 @@ def test_one_beam_destroys_only_one_meteor() -> None:
         ]
     )
 
-    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
+    assert events.enemies_destroyed == 1
     assert session.beams == []
     assert len(session.meteors) == 1
     assert session.invasion_gauge == 2
@@ -320,8 +323,9 @@ def test_beam_destroys_chaser_and_increases_invasion_gauge() -> None:
     session.beams.append(Beam(x=300.0, y=200.0))
     session.chasers.append(_create_chaser(x=310.0, y=195.0))
 
-    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
+    assert events.enemies_destroyed == 1
     assert session.beams == []
     assert session.chasers == []
     assert session.invasion_gauge == 5
@@ -463,8 +467,9 @@ def test_shooter_contact_damages_player_and_removes_shooter() -> None:
     session = _create_session()
     session.shooters.append(_create_shooter(x=120.0, y=220.0))
 
-    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
+    assert events.player_was_hit
     assert session.player.health == 2
     assert session.shooters == []
 
@@ -577,8 +582,9 @@ def test_beam_damages_boss_and_is_removed() -> None:
     _enter_boss_phase(session)
     session.beams.append(Beam(x=540.0, y=200.0))
 
-    session.update(PlayerCommand(), elapsed_seconds=0.01)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.01)
 
+    assert events.boss_hit_count == 1
     assert session.beams == []
     assert session.boss is not None
     assert session.boss.health == 19
@@ -685,8 +691,9 @@ def test_invincibility_prevents_additional_damage() -> None:
     session.update(PlayerCommand(), elapsed_seconds=0.01)
     session.meteors.append(_create_meteor(x=200.0, y=220.0))
 
-    session.update(PlayerCommand(), elapsed_seconds=0.5)
+    events = session.update(PlayerCommand(), elapsed_seconds=0.5)
 
+    assert not events.player_was_hit
     assert session.player.health == 2
     assert session.player.invincibility_remaining == 0.5
     assert session.meteors == []

@@ -63,6 +63,7 @@ Earth_Invasion_Game/
 │       ├── gameplay/
 │       │   ├── commands.py
 │       │   ├── entities.py
+│       │   ├── events.py
 │       │   ├── geometry.py
 │       │   ├── settings.py
 │       │   ├── session.py
@@ -71,7 +72,9 @@ Earth_Invasion_Game/
 │       └── pygame_app/
 │           ├── app.py
 │           ├── assets.py
+│           ├── audio.py
 │           ├── display.py
+│           ├── effects.py
 │           ├── fixed_step.py
 │           ├── hud.py
 │           ├── input.py
@@ -135,6 +138,17 @@ Pygameの画像や音声は扱いません。
 
 `screens.py`は、タイトル、ルール、結果画面を描画します。
 ゲーム画面の描画とは分けます。
+
+`events.py`は、1回の固定更新で起きた出来事を表します。
+ビーム発射、敵破壊、ボスへの命中、プレイヤーの被弾をPygame側へ返します。
+ゲームルール側は、どの音を鳴らすかを知りません。
+
+`audio.py`は、ゲームの出来事を短い効果音へ変換します。
+音声ファイルは使わず、起動時に単純な電子音を作ります。
+音声デバイスを使えない場合は無音で動作します。
+
+`effects.py`は、被弾フラッシュの残り時間を管理します。
+描画はPygameアプリケーションが行います。
 
 アプリケーションの画面は次の5種類です。
 
