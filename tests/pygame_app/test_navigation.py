@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from earth_invasion.gameplay.status import GameStatus
 from earth_invasion.pygame_app.navigation import (
     AppScreen,
     NavigationAction,
@@ -64,11 +65,19 @@ def test_rules_are_opened_from_title() -> None:
 def test_gameplay_result_is_recorded() -> None:
     screen_flow = ScreenFlow(AppScreen.GAMEPLAY)
 
-    screen_flow.show_game_over()
+    screen_flow.show_gameplay_result(GameStatus.GAME_OVER)
     _assert_current_screen(screen_flow, AppScreen.GAME_OVER)
 
-    screen_flow.show_game_clear()
+    screen_flow.show_gameplay_result(GameStatus.GAME_CLEAR)
     _assert_current_screen(screen_flow, AppScreen.GAME_CLEAR)
+
+
+def test_playing_status_keeps_gameplay_screen() -> None:
+    screen_flow = ScreenFlow(AppScreen.GAMEPLAY)
+
+    screen_flow.show_gameplay_result(GameStatus.PLAYING)
+
+    _assert_current_screen(screen_flow, AppScreen.GAMEPLAY)
 
 
 def test_retry_returns_to_gameplay() -> None:

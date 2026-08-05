@@ -148,7 +148,7 @@ class PygameApplication:
                         damage_flash,
                         elapsed_seconds,
                     )
-                    self._show_gameplay_result(screen_flow, session)
+                    screen_flow.show_gameplay_result(session.status)
 
                 music_player.play(music_track_for(screen_flow.current, session.current_phase))
                 self._draw_current_screen(
@@ -216,16 +216,6 @@ class PygameApplication:
             audio_player.play(events)
             if events.player_was_hit:
                 damage_flash.trigger()
-
-    def _show_gameplay_result(
-        self,
-        screen_flow: ScreenFlow,
-        session: GameSession,
-    ) -> None:
-        if session.is_game_over:
-            screen_flow.show_game_over()
-        elif session.is_game_clear:
-            screen_flow.show_game_clear()
 
     def _draw_current_screen(
         self,

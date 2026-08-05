@@ -21,24 +21,24 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.logical_resolution.width == 750
     assert config.gameplay.logical_resolution.height == 500
     assert config.gameplay.player.max_health == 3
-    assert config.gameplay.player.invincibility_seconds == 1.0
+    assert config.gameplay.player.invincibility_seconds == 1.2
     assert config.gameplay.player.movement_speed_pixels_per_second == 240.0
-    assert config.gameplay.weapon.beam_cooldown_seconds == 0.25
+    assert config.gameplay.weapon.beam_cooldown_seconds == 0.2
     assert config.gameplay.weapon.beam_speed_pixels_per_second == 600.0
-    assert config.gameplay.meteor.spawn_interval_seconds == 1.2
-    assert config.gameplay.meteor.minimum_speed_pixels_per_second == 180.0
-    assert config.gameplay.meteor.maximum_speed_pixels_per_second == 300.0
-    assert config.gameplay.chaser.spawn_interval_seconds == 0.8
-    assert config.gameplay.chaser.horizontal_speed_pixels_per_second == 240.0
-    assert config.gameplay.chaser.tracking_speed_pixels_per_second == 180.0
-    assert config.gameplay.shooter.spawn_interval_seconds == 1.0
-    assert config.gameplay.shooter.horizontal_speed_pixels_per_second == 120.0
-    assert config.gameplay.shooter.shot_interval_seconds == 0.8
-    assert config.gameplay.shooter.projectile_speed_pixels_per_second == 300.0
-    assert config.gameplay.boss.max_health == 20
-    assert config.gameplay.boss.vertical_speed_pixels_per_second == 100.0
-    assert config.gameplay.boss.shot_interval_seconds == 0.6
-    assert config.gameplay.boss.projectile_speed_pixels_per_second == 360.0
+    assert config.gameplay.meteor.spawn_interval_seconds == 1.4
+    assert config.gameplay.meteor.minimum_speed_pixels_per_second == 160.0
+    assert config.gameplay.meteor.maximum_speed_pixels_per_second == 260.0
+    assert config.gameplay.chaser.spawn_interval_seconds == 1.1
+    assert config.gameplay.chaser.horizontal_speed_pixels_per_second == 210.0
+    assert config.gameplay.chaser.tracking_speed_pixels_per_second == 150.0
+    assert config.gameplay.shooter.spawn_interval_seconds == 1.5
+    assert config.gameplay.shooter.horizontal_speed_pixels_per_second == 100.0
+    assert config.gameplay.shooter.shot_interval_seconds == 1.2
+    assert config.gameplay.shooter.projectile_speed_pixels_per_second == 240.0
+    assert config.gameplay.boss.max_health == 12
+    assert config.gameplay.boss.vertical_speed_pixels_per_second == 80.0
+    assert config.gameplay.boss.shot_interval_seconds == 1.0
+    assert config.gameplay.boss.projectile_speed_pixels_per_second == 280.0
     assert config.gameplay.invasion_rewards.meteor == 2
     assert config.gameplay.invasion_rewards.chaser == 5
     assert config.gameplay.invasion_rewards.shooter == 10
@@ -46,9 +46,9 @@ def test_normal_profile_loads_expected_values() -> None:
     assert config.gameplay.audio.sound_effect_volume == 0.0
     assert config.stage.profile == "normal"
     assert config.stage.invasion_target == 100
-    assert config.stage.duration_seconds_for("meteor") == 30.0
-    assert config.stage.duration_seconds_for("chaser") == 45.0
-    assert config.stage.duration_seconds_for("shooter") == 60.0
+    assert config.stage.duration_seconds_for("meteor") == 20.0
+    assert config.stage.duration_seconds_for("chaser") == 25.0
+    assert config.stage.duration_seconds_for("shooter") == 30.0
     assert [phase.id for phase in config.stage.phases] == [
         "meteor",
         "chaser",

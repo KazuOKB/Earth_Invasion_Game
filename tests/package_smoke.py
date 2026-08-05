@@ -11,9 +11,9 @@ assert normal_config.stage.invasion_target == 100
 assert test_config.stage.invasion_target == 10
 assert normal_config.gameplay.weapon.beam_speed_pixels_per_second == 600.0
 assert normal_config.gameplay.invasion_rewards.meteor == 2
-assert normal_config.gameplay.chaser.spawn_interval_seconds == 0.8
-assert normal_config.gameplay.shooter.shot_interval_seconds == 0.8
-assert normal_config.gameplay.boss.max_health == 20
+assert normal_config.gameplay.chaser.spawn_interval_seconds == 1.1
+assert normal_config.gameplay.shooter.shot_interval_seconds == 1.2
+assert normal_config.gameplay.boss.max_health == 12
 assert normal_config.gameplay.audio.music_volume == 0.0
 assert normal_config.gameplay.audio.sound_effect_volume == 0.0
 assert test_config.stage.duration_seconds_for("meteor") == 2.0

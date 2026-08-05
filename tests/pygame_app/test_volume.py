@@ -33,11 +33,21 @@ def test_left_and_right_adjust_selected_volume() -> None:
     control = VolumeControl(music_volume=0.5, sound_effect_volume=0.5)
 
     assert control.handle(VolumeKey.RIGHT)
-    assert control.music_volume == 0.6
+    assert control.music_volume == 0.55
 
     control.handle(VolumeKey.DOWN)
     assert control.handle(VolumeKey.LEFT)
-    assert control.sound_effect_volume == 0.4
+    assert control.sound_effect_volume == 0.45
+
+
+def test_volume_changes_in_five_percent_steps() -> None:
+    control = VolumeControl(music_volume=0.0, sound_effect_volume=0.0)
+
+    for _ in range(3):
+        control.handle(VolumeKey.RIGHT)
+
+    assert control.music_volume == 0.15
+    assert control.percentage_for(VolumeTarget.MUSIC) == 15
 
 
 def test_volume_stays_between_zero_and_one() -> None:

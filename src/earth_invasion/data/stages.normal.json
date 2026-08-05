@@ -4,15 +4,15 @@
   "phases": [
     {
       "id": "meteor",
-      "duration_seconds": 30.0
+      "duration_seconds": 20.0
     },
     {
       "id": "chaser",
-      "duration_seconds": 45.0
+      "duration_seconds": 25.0
     },
     {
       "id": "shooter",
-      "duration_seconds": 60.0
+      "duration_seconds": 30.0
     },
     {
       "id": "boss",

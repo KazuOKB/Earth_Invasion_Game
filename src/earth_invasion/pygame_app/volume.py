@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-VOLUME_STEP = 0.1
+VOLUME_STEP = 0.05
 
 
 class VolumeTarget(Enum):
@@ -68,7 +68,7 @@ class VolumeControl:
 
 
 def _adjusted_volume(volume: float, amount: float) -> float:
-    return round(min(max(volume + amount, 0.0), 1.0), 1)
+    return round(min(max(volume + amount, 0.0), 1.0), 2)
 
 
 def _check_volume(volume: float) -> None:
