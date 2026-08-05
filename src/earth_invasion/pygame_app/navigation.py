@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from earth_invasion.gameplay.status import GameStatus
+
 
 class AppScreen(Enum):
     """現在表示している画面。"""
@@ -64,6 +66,17 @@ class ScreenFlow:
         """ゲームクリア画面へ移動する。"""
 
         self.current = AppScreen.GAME_CLEAR
+
+    def show_gameplay_result(self, status: GameStatus) -> None:
+        """ゲーム終了時だけ、対応する結果画面へ移動する。"""
+
+        match status:
+            case GameStatus.GAME_OVER:
+                self.show_game_over()
+            case GameStatus.GAME_CLEAR:
+                self.show_game_clear()
+            case GameStatus.PLAYING:
+                return
 
 
 def action_for_key(screen: AppScreen, key: NavigationKey) -> NavigationAction:
