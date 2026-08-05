@@ -31,11 +31,14 @@ def test_only_top_five_scores_are_saved_in_descending_order(tmp_path: Path) -> N
 
 def test_score_below_fifth_place_does_not_overwrite_file(tmp_path: Path) -> None:
     path = tmp_path / "ranking.json"
-    ranking = ScoreRanking(path=path, scores=(500, 400, 300, 200, 100))
+    path.write_text("[500, 400, 300, 200, 100]", encoding="utf-8")
+    ranking = ScoreRanking.load(path)
+    saved_text = path.read_text(encoding="utf-8")
+
     ranking.record(50)
 
-    assert not path.exists()
     assert ranking.scores == (500, 400, 300, 200, 100)
+    assert path.read_text(encoding="utf-8") == saved_text
 
 
 def test_zero_score_is_not_saved(tmp_path: Path) -> None:
