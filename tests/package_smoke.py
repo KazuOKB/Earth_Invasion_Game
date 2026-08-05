@@ -11,6 +11,7 @@ assert normal_config.stage.invasion_target == 100
 assert test_config.stage.invasion_target == 10
 assert normal_config.gameplay.weapon.beam_speed_pixels_per_second == 600.0
 assert normal_config.gameplay.invasion_rewards.meteor == 2
+assert normal_config.gameplay.score_rewards.clear_bonus == 2000
 assert normal_config.gameplay.chaser.spawn_interval_seconds == 1.1
 assert normal_config.gameplay.shooter.shot_interval_seconds == 1.2
 assert normal_config.gameplay.boss.max_health == 12

@@ -94,6 +94,17 @@ class InvasionRewards:
 
 
 @dataclass(frozen=True, slots=True)
+class ScoreRewards:
+    """敵の撃破、ボス命中、ゲームクリアで増えるスコア。"""
+
+    meteor: int
+    chaser: int
+    shooter: int
+    boss_hit: int
+    clear_bonus: int
+
+
+@dataclass(frozen=True, slots=True)
 class AudioConfig:
     """BGMと効果音の音量設定。"""
 
@@ -114,6 +125,7 @@ class GameplayConfig:
     shooter: ShooterConfig
     boss: BossConfig
     invasion_rewards: InvasionRewards
+    score_rewards: ScoreRewards
     audio: AudioConfig
 
 
@@ -185,6 +197,7 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
     shooter = _required_object(data, "shooter", "gameplay")
     boss = _required_object(data, "boss", "gameplay")
     rewards = _required_object(data, "invasion_rewards", "gameplay")
+    score_rewards = _required_object(data, "score_rewards", "gameplay")
     audio = _required_object(data, "audio", "gameplay")
 
     meteor_config = _parse_meteor_config(meteor)
@@ -282,6 +295,13 @@ def load_gameplay_config(path: ConfigFile) -> GameplayConfig:
             meteor=_positive_int(rewards, "meteor", "invasion_rewards"),
             chaser=_positive_int(rewards, "chaser", "invasion_rewards"),
             shooter=_positive_int(rewards, "shooter", "invasion_rewards"),
+        ),
+        score_rewards=ScoreRewards(
+            meteor=_positive_int(score_rewards, "meteor", "score_rewards"),
+            chaser=_positive_int(score_rewards, "chaser", "score_rewards"),
+            shooter=_positive_int(score_rewards, "shooter", "score_rewards"),
+            boss_hit=_positive_int(score_rewards, "boss_hit", "score_rewards"),
+            clear_bonus=_positive_int(score_rewards, "clear_bonus", "score_rewards"),
         ),
         audio=AudioConfig(
             music_volume=_volume(audio, "music_volume"),

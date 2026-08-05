@@ -137,8 +137,12 @@ class GameplayRenderer:
             True,
             TEXT_COLOR,
         )
-        stage_status_rect = stage_status.get_rect(center=(self.logical_size[0] // 2, 18))
+        stage_status_rect = stage_status.get_rect(midleft=(20, 18))
         surface.blit(stage_status, stage_status_rect)
+
+        score = text_font.render(f"Score: {session.score}", True, TEXT_COLOR)
+        score_rect = score.get_rect(midright=(self.logical_size[0] - 20, 18))
+        surface.blit(score, score_rect)
 
         self._draw_invasion_gauge(surface, text_font, session)
         self._draw_hearts(surface, text_font, session)

@@ -130,6 +130,24 @@ class InvasionSettings:
         _check_positive(self.shooter_reward, "invasion.shooter_reward")
 
 
+@dataclass(frozen=True, slots=True)
+class ScoreSettings:
+    """敵の種類とゲームクリアに対応するスコア。"""
+
+    meteor_reward: int
+    chaser_reward: int
+    shooter_reward: int
+    boss_hit_reward: int
+    clear_bonus: int
+
+    def __post_init__(self) -> None:
+        _check_positive(self.meteor_reward, "score.meteor_reward")
+        _check_positive(self.chaser_reward, "score.chaser_reward")
+        _check_positive(self.shooter_reward, "score.shooter_reward")
+        _check_positive(self.boss_hit_reward, "score.boss_hit_reward")
+        _check_positive(self.clear_bonus, "score.clear_bonus")
+
+
 def _check_positive(value: int | float, name: str) -> None:
     if value <= 0:
         raise ValueError(f"{name}は0より大きくしてください")

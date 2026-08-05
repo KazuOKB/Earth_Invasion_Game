@@ -27,6 +27,7 @@ from earth_invasion.gameplay.settings import (
     InvasionSettings,
     MeteorSettings,
     PlayerSettings,
+    ScoreSettings,
     ShooterSettings,
     WeaponSettings,
 )
@@ -52,6 +53,7 @@ class GameSession:
     shooter_settings: ShooterSettings
     boss_settings: BossSettings
     invasion_settings: InvasionSettings
+    score_settings: ScoreSettings
     stage: StageProgress
     random_source: random.Random
     player: Player
@@ -67,6 +69,7 @@ class GameSession:
     chaser_spawn_remaining: float = 0.0
     shooter_spawn_remaining: float = 0.0
     invasion_gauge: int = 0
+    score: int = 0
 
     @classmethod
     def create(
@@ -82,6 +85,7 @@ class GameSession:
         shooter_settings: ShooterSettings,
         boss_settings: BossSettings,
         invasion_settings: InvasionSettings,
+        score_settings: ScoreSettings,
         stage_schedule: StageSchedule,
         random_source: random.Random,
     ) -> GameSession:
@@ -118,6 +122,7 @@ class GameSession:
             shooter_settings=shooter_settings,
             boss_settings=boss_settings,
             invasion_settings=invasion_settings,
+            score_settings=score_settings,
             stage=StageProgress(schedule=stage_schedule),
             random_source=random_source,
             player=player,
@@ -225,6 +230,7 @@ class GameSession:
         self.chaser_spawn_remaining = self.chaser_settings.spawn_interval_seconds
         self.shooter_spawn_remaining = self.shooter_settings.spawn_interval_seconds
         self.invasion_gauge = 0
+        self.score = 0
         self.status = GameStatus.PLAYING
 
     def _move_player(self, command: PlayerCommand, elapsed_seconds: float) -> None:
@@ -491,6 +497,7 @@ class GameSession:
 
         gained_points = destroyed_meteor_count * self.invasion_settings.meteor_reward
         self._increase_invasion_gauge(gained_points)
+        self.score += destroyed_meteor_count * self.score_settings.meteor_reward
         return destroyed_meteor_count
 
     def _resolve_beam_chaser_collisions(self) -> int:
@@ -520,6 +527,7 @@ class GameSession:
 
         gained_points = destroyed_chaser_count * self.invasion_settings.chaser_reward
         self._increase_invasion_gauge(gained_points)
+        self.score += destroyed_chaser_count * self.score_settings.chaser_reward
         return destroyed_chaser_count
 
     def _resolve_beam_shooter_collisions(self) -> int:
@@ -549,6 +557,7 @@ class GameSession:
 
         gained_points = destroyed_shooter_count * self.invasion_settings.shooter_reward
         self._increase_invasion_gauge(gained_points)
+        self.score += destroyed_shooter_count * self.score_settings.shooter_reward
         return destroyed_shooter_count
 
     def _resolve_beam_boss_collisions(self) -> int:
@@ -565,10 +574,14 @@ class GameSession:
                 remaining_beams.append(beam)
 
         self.beams = remaining_beams
+        boss_health_before_hit = self.boss.health
         self.boss.take_damage(hit_count)
+        effective_hit_count = min(hit_count, boss_health_before_hit)
+        self.score += effective_hit_count * self.score_settings.boss_hit_reward
 
         if self.boss.is_defeated:
             self.status = GameStatus.GAME_CLEAR
+            self.score += self.score_settings.clear_bonus
 
         return hit_count
 

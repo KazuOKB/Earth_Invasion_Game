@@ -17,6 +17,7 @@ from earth_invasion.gameplay.settings import (
     InvasionSettings,
     MeteorSettings,
     PlayerSettings,
+    ScoreSettings,
     ShooterSettings,
     WeaponSettings,
 )
@@ -183,6 +184,7 @@ def test_beam_destroys_meteor_and_increases_invasion_gauge() -> None:
     assert session.beams == []
     assert session.meteors == []
     assert session.invasion_gauge == 2
+    assert session.score == 100
 
 
 def test_beam_and_meteor_remain_when_they_do_not_overlap() -> None:
@@ -330,6 +332,7 @@ def test_beam_destroys_chaser_and_increases_invasion_gauge() -> None:
     assert session.beams == []
     assert session.chasers == []
     assert session.invasion_gauge == 5
+    assert session.score == 300
 
 
 def test_shooter_spawns_only_after_entering_shooter_phase() -> None:
@@ -462,6 +465,7 @@ def test_beam_destroys_shooter_and_increases_invasion_gauge() -> None:
     assert session.beams == []
     assert session.shooters == []
     assert session.invasion_gauge == 10
+    assert session.score == 500
 
 
 def test_shooter_contact_damages_player_and_removes_shooter() -> None:
@@ -591,6 +595,7 @@ def test_beam_damages_boss_and_is_removed() -> None:
     assert session.beams == []
     assert session.boss is not None
     assert session.boss.health == 19
+    assert session.score == 100
 
 
 def test_each_overlapping_beam_damages_boss() -> None:
@@ -622,6 +627,7 @@ def test_defeating_boss_changes_status_to_game_clear() -> None:
     assert session.boss.is_defeated
     assert session.is_game_clear
     assert session.is_finished
+    assert session.score == 2100
 
 
 def test_game_clear_stops_game_updates() -> None:
@@ -653,6 +659,7 @@ def test_restart_after_game_clear_resets_boss_and_status() -> None:
     assert session.boss is None
     assert session.current_phase is GamePhase.METEOR
     assert session.invasion_gauge == 0
+    assert session.score == 0
 
 
 def test_meteor_contact_damages_player_and_removes_meteor() -> None:
@@ -861,6 +868,13 @@ def _create_session(random_seed: int = 1, playfield_top: int = 0) -> GameSession
             meteor_reward=2,
             chaser_reward=5,
             shooter_reward=10,
+        ),
+        score_settings=ScoreSettings(
+            meteor_reward=100,
+            chaser_reward=300,
+            shooter_reward=500,
+            boss_hit_reward=100,
+            clear_bonus=2000,
         ),
         stage_schedule=StageSchedule(
             meteor_duration_seconds=30.0,

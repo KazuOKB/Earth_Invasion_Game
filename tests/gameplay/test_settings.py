@@ -7,6 +7,7 @@ from earth_invasion.gameplay.settings import (
     ChaserSettings,
     MeteorSettings,
     PlayerSettings,
+    ScoreSettings,
     ShooterSettings,
 )
 
@@ -65,4 +66,15 @@ def test_non_positive_boss_health_is_rejected() -> None:
             vertical_speed=100.0,
             shot_interval_seconds=0.6,
             projectile_speed=360.0,
+        )
+
+
+def test_non_positive_clear_bonus_is_rejected() -> None:
+    with pytest.raises(ValueError, match="score.clear_bonus"):
+        ScoreSettings(
+            meteor_reward=100,
+            chaser_reward=300,
+            shooter_reward=500,
+            boss_hit_reward=100,
+            clear_bonus=0,
         )
