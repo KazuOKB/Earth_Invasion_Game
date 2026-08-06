@@ -160,16 +160,20 @@ pygbag 0.9.3とWeb用Python 3.13を使います。
 
 ```bash
 uv sync
-uv run pygbag --PYBUILD 3.13 --width 750 --height 500 --title "Earth Invasion Game" .
+uv run pygbag --PYBUILD 3.13 --width 750 --height 500 \
+  --title "Earth Invasion Game" --template web/earth-invasion.tmpl .
 ```
 
 起動後、ブラウザで<http://localhost:8000/>を開きます。
-最初の読込後、画面をクリックするとゲームが始まります。
+`127.0.0.1`ではなく、`localhost`を使ってください。
+待機画面が「準備完了」に変わったら、画面をクリックしてください。
+その後、ゲームのタイトル画面が表示されます。
 
 ### リリース用ビルド
 
 ```bash
-uv run pygbag --build --PYBUILD 3.13 --width 750 --height 500 --title "Earth Invasion Game" .
+uv run pygbag --build --PYBUILD 3.13 --width 750 --height 500 \
+  --title "Earth Invasion Game" --template web/earth-invasion.tmpl .
 ```
 
 成果物は`build/web/`へ作られます。
@@ -206,6 +210,7 @@ uv run mypy main.py src tests scripts
 - `scripts/`: オリジナルBGMの生成スクリプト
 - `main.py`: ブラウザ版の起動ファイル
 - `pygbag.ini`: ブラウザ版へ含めるファイルの設定
+- `web/earth-invasion.tmpl`: ブラウザ版の待機画面
 
 ## 現在の実装状況
 

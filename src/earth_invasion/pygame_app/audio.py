@@ -36,22 +36,31 @@ class AudioPlayer:
         """音声を初期化する。失敗した場合は無音で動作する。"""
 
         _check_volume(volume)
-        try:
-            if pygame.mixer.get_init() is None:
-                pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=1, buffer=512)
+        player = cls(sounds={}, volume=volume)
+        if volume == 0.0:
+            return player
 
-            sounds = {
+        player._enable()
+        return player
+
+    def _enable(self) -> None:
+        """効果音を使える状態にする。"""
+
+        try:
+            if not initialize_audio_mixer():
+                return
+
+            self.sounds = {
                 SoundEffect.BEAM: _create_tone(760.0, 0.07, 0.16),
                 SoundEffect.ENEMY_DESTROYED: _create_tone(180.0, 0.12, 0.25),
                 SoundEffect.BOSS_HIT: _create_tone(300.0, 0.08, 0.20),
                 SoundEffect.PLAYER_HIT: _create_tone(95.0, 0.18, 0.30),
                 SoundEffect.ENEMY_ATTACK_HIT: _create_tone(520.0, 0.16, 0.32),
             }
-            for sound in sounds.values():
-                sound.set_volume(volume)
-            return cls(sounds=sounds, volume=volume)
-        except pygame.error:
-            return cls(sounds={}, volume=volume)
+            for sound in self.sounds.values():
+                sound.set_volume(self.volume)
+        except (pygame.error, RuntimeError):
+            self.sounds = {}
 
     def play(self, events: GameplayEvents) -> None:
         """今回起きた出来事に対応する効果音を再生する。"""
@@ -69,6 +78,8 @@ class AudioPlayer:
 
         _check_volume(volume)
         self.volume = volume
+        if volume > 0.0 and not self.sounds:
+            self._enable()
         for sound in self.sounds.values():
             sound.set_volume(volume)
 
@@ -110,6 +121,17 @@ def _create_tone(
         samples.append(round(32_767 * volume * fade * wave))
 
     return pygame.mixer.Sound(buffer=samples)
+
+
+def initialize_audio_mixer() -> bool:
+    """必要な場合だけミキサーを初期化する。"""
+
+    try:
+        if pygame.mixer.get_init() is None:
+            pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=1, buffer=512)
+    except (pygame.error, RuntimeError):
+        return False
+    return True
 
 
 def _check_volume(volume: float) -> None:

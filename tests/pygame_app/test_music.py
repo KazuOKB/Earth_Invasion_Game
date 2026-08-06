@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import pygame
 import pytest
 
 from earth_invasion.gameplay.stage import GamePhase
+from earth_invasion.pygame_app import music as music_module
 from earth_invasion.pygame_app.music import MusicPlayer, MusicTrack, music_track_for
 from earth_invasion.pygame_app.navigation import AppScreen
 
@@ -42,9 +42,21 @@ def test_invalid_music_volume_is_rejected(volume: float) -> None:
 
 
 def test_unavailable_audio_device_disables_music(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(pygame.mixer, "get_init", lambda: None)
+    monkeypatch.setattr(music_module, "initialize_audio_mixer", lambda: False)
 
     music_player = MusicPlayer.create(0.3)
+
+    assert music_player.tracks == {}
+    assert music_player.channel is None
+
+
+def test_zero_volume_skips_music_initialization(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_if_called() -> bool:
+        raise AssertionError("mixer should not be initialized")
+
+    monkeypatch.setattr(music_module, "initialize_audio_mixer", fail_if_called)
+
+    music_player = MusicPlayer.create(0.0)
 
     assert music_player.tracks == {}
     assert music_player.channel is None

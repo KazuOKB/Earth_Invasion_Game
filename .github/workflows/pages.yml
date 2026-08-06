@@ -27,7 +27,8 @@ jobs:
       - name: Build browser game
         run: >-
           uv run pygbag --build --PYBUILD 3.13
-          --width 750 --height 500 --title "Earth Invasion Game" .
+          --width 750 --height 500 --title "Earth Invasion Game"
+          --template web/earth-invasion.tmpl .
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload browser game

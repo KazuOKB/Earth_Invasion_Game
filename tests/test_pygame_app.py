@@ -60,6 +60,29 @@ def test_application_async_api_runs_one_frame(
     assert asyncio.run(app.run_async(frame_limit=1)) == 0
 
 
+def test_browser_does_not_stop_text_input(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
+    monkeypatch.setattr("earth_invasion.pygame_app.app.sys.platform", "emscripten")
+
+    def fail_if_called() -> None:
+        raise AssertionError("stop_text_input should not be called")
+
+    monkeypatch.setattr(pygame.key, "stop_text_input", fail_if_called)
+
+    from earth_invasion.pygame_app.app import PygameApplication
+
+    app = PygameApplication(
+        load_application_config("test"),
+        ranking_path=tmp_path / "ranking.json",
+    )
+
+    assert asyncio.run(app.run_async(frame_limit=1)) == 0
+
+
 def test_test_profile_result_is_saved_to_ranking(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
